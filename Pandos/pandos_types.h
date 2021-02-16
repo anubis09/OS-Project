@@ -29,6 +29,7 @@ typedef struct pcb_t {
 	state_t     p_s;              /* processor state        */
 
 	/* add more fields here */
+	int *semAdd; /* ptr to semaphore on*/
 
 }  pcb_t, *pcb_PTR;
 	
