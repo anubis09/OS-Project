@@ -26,6 +26,11 @@ HIDDEN semd_t *searchSem(int *);
 lo inizializza con semAdd e lo restituisce
 se lista libera è vuota restituisce NULL*/
 HIDDEN semd_t *allocSem(int *semAdd);
+
+/*prende il semaforo con valore semAdd da ASL e lo 
+restituisce alla lista libera.
+per ora nonn ci sono controlli che non sia un dummy node*/
+HIDDEN void freeSem(int *);
 int insertBlocked(int *, pcb_PTR );
 pcb_PTR removeBlocked(int *);
 pcb_PTR outBlocked(pcb_PTR );
