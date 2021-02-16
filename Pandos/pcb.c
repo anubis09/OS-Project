@@ -38,6 +38,7 @@ pcb_PTR allocPcb(){
         }
         tmp->p_s.hi = 0;
         tmp->p_s.lo = 0;
+	tmp->semAdd = NULL;
     }
     return tmp;
 }
