@@ -87,7 +87,19 @@ int insertBlocked(int *semAdd, pcb_PTR p){
 }
 
 pcb_PTR removeBlocked(int *semAdd){
-
+    semd_t *semaphore = searchSem(semAdd);
+    //se non ho semaforo con tale descrittore in ASL 
+    if(semaphore->s_semAdd != semAdd){
+        return NULL;
+    }
+    else{
+        pcb_PTR head = removeProcQ(&(semaphore->s_procQ));
+        //se la lista diventa vuota, tolgo il semaforo dalla ASL
+        if(emptyProcQ(semaphore->s_procQ)){
+            freeSem(semAdd);
+        }
+        return head;
+    }
 }
 
 pcb_PTR outBlocked(pcb_PTR p){
