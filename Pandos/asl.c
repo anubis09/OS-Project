@@ -107,5 +107,13 @@ pcb_PTR outBlocked(pcb_PTR p){
 }
 
 pcb_PTR headBlocked(int *semAdd){
-
+    semd_t *semaphore = searchSem(semAdd);
+    //se non ho semaforo con tale descrittore in ASL 
+     if(semaphore->s_semAdd != semAdd){
+        return NULL;
+    }
+    else{
+        //ritorno la testa della coda, se è vuota ritorna NULL
+        return headProcQ(semaphore->s_procQ);
+    }
 }
