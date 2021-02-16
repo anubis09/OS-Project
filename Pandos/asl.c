@@ -39,6 +39,19 @@ HIDDEN semd_t *allocSem(int *semAdd){
     }
 }
 
+HIDDEN void freeSem(int *semAdd){
+    int prev_semAdd = *semAdd -1;
+    //trovo il semaforo precedenti in ASL a quello con descrittore semAdd
+    //che essendo un valore intero basta diminuirlo di uno siamo a posto
+    semd_t *prev_semaphore = searchSem(&prev_semAdd);
+    semd_t *semaphore =prev_semaphore->s_next; 
+    prev_semaphore->s_next = semaphore->s_next;
+    //ora basta inserire semaphore in testa alla lista libera.
+    //i valori di semaphore li cambio quando alloco da lista libera
+    semaphore->s_next = semdFree_h;
+    semdFree_h= semaphore;
+}
+
 HIDDEN semd_t *searchSem(int *semAdd){
     semd_t *tmp = semd_h;
     semd_t *tmp_prev = tmp;
