@@ -42,7 +42,7 @@ HIDDEN semd_t *allocSem(int *semAdd){
 HIDDEN semd_t *searchSem(int *semAdd){
     semd_t *tmp = semd_h;
     semd_t *tmp_prev = tmp;
-    while(*(tmp->s_semAdd) < *semAdd){
+    while(*(tmp->s_semAdd) <= *semAdd){
         tmp_prev = tmp;
         tmp = tmp->s_next;
     }
