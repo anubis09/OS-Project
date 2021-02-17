@@ -1,7 +1,7 @@
 #include "asl.h"
 #include "pcb.h"
-#define MAXINT 0xFFFFFFFF
-#define MINMEM 0x00000000
+#define MAXINT 0xFFFFFFFFFFFFFFFF //forse in umps3 deve essere 0xFFFFFFFF
+#define MINMEM 0x0000000000000000
 
 HIDDEN semd_t *semd_h; 
 HIDDEN semd_t *semdFree_h;
@@ -60,7 +60,7 @@ HIDDEN void freeSem(int *semAdd){
 HIDDEN semd_t *searchSem(int *semAdd){
     semd_t *tmp = semd_h;
     semd_t *tmp_prev = tmp;
-    while((tmp->s_semAdd <= semAdd) && (tmp->s_next !=NULL)){ //appena ne trovo uno < mi fermo 
+    while(tmp->s_semAdd <= semAdd){ 
         tmp_prev = tmp;
         tmp = tmp->s_next;
     }
