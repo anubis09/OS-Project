@@ -1,2 +1,2 @@
 # PanDavoli
-PandOs project, for operative systems exam! 
+PandOs project for operative systems exam! 
