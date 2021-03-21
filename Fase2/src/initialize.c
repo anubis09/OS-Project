@@ -18,6 +18,14 @@ HIDDEN int printer_sem[8];
 HIDDEN int transmitter_sem[8];
 HIDDEN int receiver_sem[8];
 
+/*Pass Up Vector*/
+typedef struct passupvector { 
+	unsigned int tlb_refill_handler;
+	unsigned int tlb_refill_stackPtr;
+	unsigned int exception_handler;
+	unsigned int exception_stackPtr; 
+} passupvector_t;
+
 
 HIDDEN void initSem(int sem[],int length){
     for(int i=0; i<length;i++){
@@ -39,9 +47,16 @@ HIDDEN void initVar(){
     initSem(receiver_sem,8);
 }
 
+HIDDEN void iniPassUPvector(passupvector_t *puvec){
+    puvec->tlb_refill_handler = (memaddr) uTLB_RefillHandler;
+    puvec->tlb_refill_stackPtr = KERNELSTACK;
+    /*puvec->exception_handler = (memaddr) fooBar;*/
+    puvec->exception_stackPtr = KERNELSTACK;
+}
+
 int main(){
     /*populate pass up vector*/
-
+      
     /*initialize variables*/
     initPcbs();
     initASL();
