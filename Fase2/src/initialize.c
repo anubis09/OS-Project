@@ -55,5 +55,4 @@ int main(){
     adam->p_time = 0;
     adam->p_supportStruct = NULL;
     /*scheduler call*/
-    dispatch();
 }
