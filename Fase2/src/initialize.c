@@ -1,5 +1,4 @@
-#include "../include/asl.h"
-#include "../include/pcb.h"
+#include "initialize.h"
 #include "p2test.c"
 #define time 100000
 extern void test();
