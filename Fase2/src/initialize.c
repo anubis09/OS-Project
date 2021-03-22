@@ -4,29 +4,6 @@
 #define time 100000
 extern void test();
 
-HIDDEN int processCount;
-HIDDEN int softBlockCount;
-HIDDEN pcb_PTR readyQueue;
-HIDDEN pcb_PTR currentProcess;
-
-HIDDEN int pseudoClock_sem;
-HIDDEN int disk_sem[8];
-HIDDEN int flash_sem[8];
-HIDDEN int network_sem[8];
-HIDDEN int printer_sem[8];
-/*terminal devices semaphore*/
-HIDDEN int transmitter_sem[8];
-HIDDEN int receiver_sem[8];
-
-/*Pass Up Vector*/
-typedef struct passupvector { 
-	unsigned int tlb_refill_handler;
-	unsigned int tlb_refill_stackPtr;
-	unsigned int exception_handler;
-	unsigned int exception_stackPtr; 
-} passupvector_t;
-
-
 HIDDEN void initSem(int sem[],int length){
     for(int i=0; i<length;i++){
         sem[i] = 0;
@@ -67,10 +44,8 @@ int main(){
     pcb_PTR adam = allocPcb();
     insertProcQ(&readyQueue,adam);
     processCount++;
-    adam->p_s.status = 0b00011000000000001111111100000000 ;
-    unsigned int ram;
-    RAMTOP(ram);
-    adam->p_s.gpr[26] = ram; 
+    adam->p_s.status = 0b00011000000000001111111100000100 ;
+    RAMTOP(adam->p_s.gpr[26]);
     adam->p_s.pc_epc = (memaddr) test;
     adam->p_s.gpr[24] = (memaddr) test;
     adam->p_child = NULL;
