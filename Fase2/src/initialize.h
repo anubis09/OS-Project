@@ -2,7 +2,6 @@
 #define INITIALIZE_H
 
 #include "../include/include.h"
-#include "scheduler.h"
 
 int processCount;
 int softBlockCount;
