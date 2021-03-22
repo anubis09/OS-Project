@@ -35,7 +35,7 @@ all : kernel.core.umps
 kernel.core.umps : kernel
 	umps3-elf2umps -k $<
 
-kernel : src/initialize.o src/asl.o src/pcb.o src/scheduler.o crtso.o libumps.o
+kernel : src/initialize.o src/asl.o src/pcb.o crtso.o libumps.o
 	$(LD) -o $@ $^ $(LDFLAGS)
 
 clean :
