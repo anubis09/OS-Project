@@ -34,8 +34,7 @@ void disable_timer(unsigned int *status){
     *status &= 0b0111111111111111111111111111;
 }
 
-int isKernelMode(){
-    unsigned int status = getSTATUS();
+int isKernelMode(unsigned int status){
     unsigned int checkKernelMode = 0b00000000000000000000000000000010;
     checkKernelMode &= status;
     /*with AND bitwise, we will only check the second bit, because is the only bit in checkKernelMode set to 1.
