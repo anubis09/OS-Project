@@ -47,4 +47,9 @@ void set_timerOn(unsigned int*);
  */
 void disable_timer(unsigned int*);
 
+/*
+    returns TRUE if the process is in kernel mode, FALSE if it's in user mode.
+*/
+int isKernelMode();
+
 #endif
