@@ -39,7 +39,7 @@ kernel : src/initialize.o src/asl.o src/pcb.o include/include.o crtso.o libumps.
 	$(LD) -o $@ $^ $(LDFLAGS)
 
 clean :
-	-rm *.o src/*.o kernel kernel.*.umps 
+	-rm *.o src/*.o include/*.o kernel kernel.*.umps 
 
 # Pattern rule for assembly modules
 %.o : %.S
