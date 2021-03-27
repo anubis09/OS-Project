@@ -40,6 +40,7 @@ pcb_PTR allocPcb(){
         tmp->p_s.lo = 0;
         tmp->p_time = 0;
         tmp->p_semAdd = NULL;
+        tmp->p_supportStruct = NULL;
     }
     return tmp;
 }
