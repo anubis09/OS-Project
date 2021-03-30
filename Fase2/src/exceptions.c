@@ -12,7 +12,7 @@ void exceptionshandler(){
         passUp_Die(PGFAULTEXCEPT);
         break;
     case 8:
-        /*Nucleus’sSYSCALLexception handler*/
+        /*Nucleus’s SYSCALLexception handler*/
         syscallDispatcher();
         break;
     default:
@@ -39,6 +39,12 @@ void passUp_Die(int except){
     }
 }
 
+HIDDEN cpu_t updateTime(){
+    signed int thisTime;
+    STCK(thisTime);
+    return (thisTime - timeStart); 
+}
+
 HIDDEN void create_process(state_t *proc_state){
     pcb_PTR newProcess = allocPcb(); 
     int ret_val;
@@ -58,6 +64,38 @@ HIDDEN void create_process(state_t *proc_state){
     proc_state->reg_v0 = ret_val;
 }
 
+/*
+Passeren (SYS3)
+This service requests the Nucleus to perform a P operation on a semaphore.
+Depending on the value of the semaphore, control is either returned to the
+Current Process, or this process is blocked on the ASL (transitions from “running”
+to “blocked”) and the Scheduler is called.  
+*/
+int Passeren(state_t *proc_state){
+    int *semaddr = (int *)proc_state->reg_a1;
+	(*semaddr)--;
+
+	if((*semaddr) < 0){
+
+		insertBlocked (semaddr , currentProcess);
+		return TRUE;
+
+	}
+    else{
+        return FALSE;
+    }
+}
+
+/*
+Get_CPU_Time (SYS6)
+Restituisce in v0 del chiamante il tempo trascorso dal processo
+nella cpu 
+*/
+HIDDEN void Get_Cpu_Time(state_t *proc_state){
+    proc_state->reg_v0 = currentProcess->p_time + updateTime();
+}
+
+
 HIDDEN void retControl(state_t *proc_state, int isBlocking){
     /*we need to update pc, otherwise we will enter an infinite syscall loop*/
     proc_state->pc_epc += WORDLEN;
@@ -68,7 +106,7 @@ HIDDEN void retControl(state_t *proc_state, int isBlocking){
     else{
         /*blocking syscall*/
         currentProcess->p_s = *proc_state;
-        /*update cpu time*/
+        currentProcess->p_time = updateTime();
         /*softBlockCount++;??*/
         dispatch();
     }   
@@ -91,7 +129,7 @@ void syscallDispatcher(){
             break;
         case PASSEREN:
             /*syscall 3*/
-            retControl(proc_state, TRUE);
+            retControl(proc_state, Passeren(proc_state));
             break;
         case VERHOGEN:
             /*syscall 4*/
@@ -103,6 +141,7 @@ void syscallDispatcher(){
             break;
         case GETTIME:
             /*syscall 6*/
+            Get_Cpu_Time(proc_state);
             retControl(proc_state, FALSE);
             break;
         case CLOCKWAIT:
