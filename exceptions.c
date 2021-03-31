@@ -22,7 +22,11 @@ HIDDEN void terminate_process(pcb_PTR process){
         
         freePcb(process);
         process = outProcQ(&readyQueue ,process);
-        
+        process = outChild(process);
+        if(process->p_semAdd != NULL ){
+            process->p_semAdd++;
+        }
+        processCount--;
     }
 }
 
