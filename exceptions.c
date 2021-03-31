@@ -3,26 +3,7 @@
 
 
 
-/*SYS1*/
-/*create a new process as a child of the caller*/
-HIDDEN void create_process(state_t *proc_state){
-    pcb_PTR newProcess = allocPcb(); 
-    int ret_val;
-    if(newProcess == NULL) ret_val = -1;
-    else{
-        state_t *statep = (state_t *)proc_state->reg_a1;
-        support_t *supportp = (support_t*)proc_state->reg_a2;
-        newProcess->p_s.status = statep->status;
-        newProcess->p_supportStruct = supportp;
-        newProcess->p_time = 0;
-        newProcess->p_semAdd = NULL;
-        insertProcQ(&readyQueue, newProcess);
-        insertChild(currentProcess, newProcess);
-        processCount++;
-        ret_val = 0;
-    }
-    proc_state->reg_v0 = ret_val;
-}
+
 
 
 /*SYS2*/
@@ -41,15 +22,12 @@ HIDDEN void terminate_process(pcb_PTR process){
         
         freePcb(process);
         process = outProcQ(&readyQueue ,process);
-        dispatch();
+        
     }
 }
 
 
-/*SYS5*/
-HIDDEN int wait_for_io_device(int IOCOMMAND, int intlNo, int dnum, int termRead){
-    
-}
+
 
 
 /*SYS8*/
