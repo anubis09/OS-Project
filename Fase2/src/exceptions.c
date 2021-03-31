@@ -130,6 +130,26 @@ HIDDEN void Passeren(state_t *proc_state){
 }
 
 /*
+Verhogen (V) (SYS4)
+This service requests the Nucleus to perform a V operation on a semaphore.
+*/
+
+void Verhogen(state_t *proc_state){
+int *semaddr = (int *)proc_state->reg_a1;
+	(*semaddr)++;
+    pcb_PTR *fp;
+    fp = removeBlocked(semaddr);
+    int block = FALSE;
+
+    if(fp!=NULL){
+        fp->p_semAdd=NULL;
+        insertProcQ(&readyQueue, fp);
+    }
+
+    retControl(proc_state,block); 
+}
+	
+/*
     WAIT_FOR_I/O_DEVICE SYS(5)
 */
 HIDDEN void wait_IOdevice(state_t *proc_state){
