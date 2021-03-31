@@ -180,6 +180,34 @@ HIDDEN void Get_Cpu_Time(state_t *proc_state){
 }
 
 
+/*
+Wait For Clock (SYS7)
+This service performs a P operation on the Nucleus maintained Pseudo-clock
+semaphore. This semaphore is V’ed every 100 milliseconds by the Nucleus.
+*/
+
+HIDDEN void Wait_For_Clock(state_t *proc_state){
+	
+	pseudoClock_sem--;
+    
+    int block = FALSE;
+
+	if(pseudoClock_sem < 0){
+
+		if(insertBlocked (&(pseudoClock_sem) , currentProcess)){
+            softBlockCount++;
+            PANIC();
+        }
+        else{
+            block = TRUE;
+        }
+		
+	}
+retControl(proc_state,block);
+}
+
+
+
 void syscallDispatcher(){
     state_t *proc_state = (state_t *)BIOSDATAPAGE;
     if(isKernelModeP(proc_state->status)){
