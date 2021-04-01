@@ -27,7 +27,8 @@ void exceptionshandler(){
 void passUp_Die(int except){
     if(currentProcess->p_supportStruct == NULL){
         /*die portion*/
-        /*call syscall 2*/
+        terminate_process(currentProcess);
+        dispatch();
     }
     else{
         /*pass up portion*/
@@ -101,6 +102,31 @@ HIDDEN void create_process(state_t *proc_state){
     }
     proc_state->reg_v0 = ret_val;
     retControl(proc_state, FALSE);
+}
+
+/*
+    TerminateProcess (SYS2)
+    This services causes the executing process to cease to exist.
+    In ad-dition, recursively, all progeny of this process are terminated as well. 
+*/
+HIDDEN void terminate_process(pcb_PTR process){    
+
+    if(process->p_child != NULL){
+        terminate_process(process->p_child);            
+    }
+
+    if(process->p_next_sib != NULL){
+        terminate_process(process->p_next_sib);
+    }
+            
+    outProcQ(&readyQueue ,process);
+    outChild(process);
+    freePcb(process);
+    processCount--;
+    /*
+    if(process->p_semAdd != NULL ){
+        process->p_semAdd++;
+    }*/
 }
 
 /*
@@ -229,6 +255,7 @@ void syscallDispatcher(){
             break;
         case TERMPROCESS:
             /*syscall 2*/
+            terminate_process(currentProcess);
             dispatch();
             break;
         case PASSEREN:
