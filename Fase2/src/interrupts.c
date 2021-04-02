@@ -49,49 +49,52 @@ void externalDeviceint(unsigned int IP){
     if(IP == DISKINTERRUPT){
         idbmA = (int* )0x10000040;
         *semaddr = &disk_sem[checkdevNo(idbmA)];
-
+        ioStatus = drA.devreg[DISKINT-3][checkdevNo(idbmA)].dtp.status;
+        
         acknowledge(DISKINT,idbmA);
-        ioStatus = SYSCALL (WAITIO,DISKINT,checkdevNo(idbmA), FALSE);
         SYSCALL (VERHOGEN, *semaddr, 0, 0);
+        readyQueue->p_s.status = ioStatus;
     }
     else if(IP == FLASHINTERRUPT){
         idbmA = (int* )0x10000040 + 0x04;
         *semaddr = &flash_sem[checkdevNo(idbmA)];
-
-        acknowledge(FLASHINT,idbmA); 
-        ioStatus = SYSCALL (WAITIO,FLASHINT,checkdevNo(idbmA), FALSE);
+        ioStatus = drA.devreg[FLASHINT-3][checkdevNo(idbmA)].dtp.status;
+        
+        acknowledge(FLASHINT,idbmA);
         SYSCALL (VERHOGEN, *semaddr, 0, 0);
+        readyQueue->p_s.status = ioStatus;
     }
     else if(IP == NETWORKINTERRUPT){
         idbmA = (int* )0x10000040 + 0x08;
         *semaddr = &network_sem[checkdevNo(idbmA)];
+        ioStatus = drA.devreg[FLASHINT-3][checkdevNo(idbmA)].dtp.status;
 
         acknowledge(NETWINT,idbmA);
-        ioStatus = SYSCALL (WAITIO,NETWINT,checkdevNo(idbmA), FALSE);
         SYSCALL (VERHOGEN, *semaddr, 0, 0);
+        readyQueue->p_s.status = ioStatus;
     }
     else if(IP == PRINTINTERRUPT){
         idbmA = (int* )0x10000040 + 0x0C;
         *semaddr = &printer_sem[checkdevNo(idbmA)];
-
+        ioStatus = drA.devreg[PRNTINT-3][checkdevNo(idbmA)].dtp.status;
+        
         acknowledge(PRNTINT,idbmA); 
-        ioStatus = SYSCALL (WAITIO,PRNTINT,checkdevNo(idbmA), FALSE);
         SYSCALL (VERHOGEN, *semaddr, 0, 0);
+        readyQueue->p_s.status = ioStatus;
     }
     else if(IP == TERMINTERRUPT){
         idbmA = (int* )0x10000040 + 0x10;
         acknowledge(TERMINT,idbmA);
-
+        
         if(choiceterm(idbmA)){
             *semaddr = &transmitter_sem[checkdevNo(idbmA)];
-            ioStatus = SYSCALL (WAITIO,TERMINT,checkdevNo(idbmA), FALSE);
-        } 
-        else {
+            ioStatus = drA.devreg[TERMINT-3][checkdevNo(idbmA)].term.transm_status;
+        } else {
             *semaddr = &receiver_sem[checkdevNo(idbmA)];
-            ioStatus = SYSCALL (WAITIO,TERMINT,checkdevNo(idbmA), TRUE);
+            ioStatus = drA.devreg[TERMINT-3][checkdevNo(idbmA)].term.recv_status;
         }
-
         SYSCALL (VERHOGEN, *semaddr, 0, 0);
+        readyQueue->p_s.status = ioStatus;
     }
 }
 
