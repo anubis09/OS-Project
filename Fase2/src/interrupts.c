@@ -1,98 +1,97 @@
 #include "interrupts.h"
 
-void interruptHandler(){
+void interruptHandler(){    
     populateDevRegister(drA);
     unsigned int causeCode = 0xFF00 & getCAUSE();
 
-    while (causeCode != 0x0000){
-        if(causeCode == LOCALTIMERINT || causeCode == TIMERINTERRUPT) timerint(causeCode);
-        else externalDeviceint(causeCode);
-    }
+    if((causeCode & LOCALTIMERINT) == LOCALTIMERINT)  timerint(causeCode & LOCALTIMERINT);
+    else if((causeCode & TIMERINTERRUPT) == TIMERINTERRUPT) timerint(causeCode & TIMERINTERRUPT);
+    else externalDeviceint(causeCode);
 }
 
 void timerint(unsigned int IP){
     if(IP == LOCALTIMERINT){
-        setTIMER(DEFAULTTIMER);
+        updatePLT;
         state_t *proc_state = (state_t *)BIOSDATAPAGE;
         currentProcess->p_s = *proc_state;
         insertProcQ(&readyQueue,currentProcess);
         dispatch();
     } else if (IP == TIMERINTERRUPT){
         state_t *proc_state = (state_t *)BIOSDATAPAGE;
-        SYSCALL (WAITCLOCK, 0, 0, 0);
-        LDIT(time);
-        VClock(proc_state);
+        LDIT(PSECOND);
+        /*should unblock all pcbs on the semaphore.*/
+        VClock();
+        LDST(proc_state);
+        /*DA GESTIRE IL CASO IN CUI IL PROCESSORE È IN WAIT()->COSA VIENE SALVATO IN BIOSDATAPAGE?*/
     }
 }
 
-void VClock(state_t *proc_state){ 
+void VClock(){ 
     int *semaddr = &pseudoClock_sem;
-    pcb_PTR *fp;
-    fp = removeBlocked(semaddr);
-    int block = FALSE;
+    pcb_PTR blocked_process = removeBlocked(semaddr);
     
-    while(fp!=NULL){
-        fp->p_semAdd=NULL;
-        insertProcQ(&readyQueue, fp);
+    while(blocked_process!=NULL){
+        blocked_process->p_semAdd=NULL;
+        insertProcQ(&readyQueue, blocked_process);
+        blocked_process = removeBlocked(semaddr);
     }
-    pseudoClock_sem = NULL;
-
-    LDST(BIOSDATAPAGE);
-    retControl(proc_state,block); 
-    
+    pseudoClock_sem = 0;
 }
 
 void externalDeviceint(unsigned int IP){
-    unsigned int idbmA;
+    int *idbmA;
     int ioStatus, *semaddr = NULL;
     
-    if(IP == DISKINTERRUPT){
-        idbmA = (int* )0x10000040;
-        *semaddr = &disk_sem[checkdevNo(idbmA)];
+    if((IP & DISKINTERRUPT) == DISKINTERRUPT){
+        idbmA = (int *)0x10000040;
+        *semaddr = &disk_sem[checkdevNo(*idbmA)];
         ioStatus = drA.devreg[DISKINT-3][checkdevNo(idbmA)].dtp.status;
-        
-        acknowledge(DISKINT,idbmA);
+
+
+        acknowledge(DISKINT,*idbmA); 
         SYSCALL (VERHOGEN, *semaddr, 0, 0);
-        readyQueue->p_s.status = ioStatus;
-    }
-    else if(IP == FLASHINTERRUPT){
-        idbmA = (int* )0x10000040 + 0x04;
-        *semaddr = &flash_sem[checkdevNo(idbmA)];
-        ioStatus = drA.devreg[FLASHINT-3][checkdevNo(idbmA)].dtp.status;
         
-        acknowledge(FLASHINT,idbmA);
-        SYSCALL (VERHOGEN, *semaddr, 0, 0);
-        readyQueue->p_s.status = ioStatus;
     }
-    else if(IP == NETWORKINTERRUPT){
-        idbmA = (int* )0x10000040 + 0x08;
-        *semaddr = &network_sem[checkdevNo(idbmA)];
+    else if((IP & FLASHINTERRUPT) == FLASHINTERRUPT){
+        idbmA = (int *)0x10000040 + 0x04;
+        *semaddr = &flash_sem[checkdevNo(*idbmA)];
         ioStatus = drA.devreg[FLASHINT-3][checkdevNo(idbmA)].dtp.status;
 
-        acknowledge(NETWINT,idbmA);
+        acknowledge(FLASHINT,*idbmA); 
         SYSCALL (VERHOGEN, *semaddr, 0, 0);
         readyQueue->p_s.status = ioStatus;
     }
-    else if(IP == PRINTINTERRUPT){
-        idbmA = (int* )0x10000040 + 0x0C;
-        *semaddr = &printer_sem[checkdevNo(idbmA)];
+    else if((IP & NETWORKINTERRUPT) == NETWORKINTERRUPT){
+        idbmA = (int *)0x10000040 + 0x08;
+        *semaddr = &network_sem[checkdevNo(*idbmA)];
+        ioStatus = drA.devreg[FLASHINT-3][checkdevNo(idbmA)].dtp.status;
+
+        acknowledge(NETWINT,*idbmA);
+        SYSCALL (VERHOGEN, *semaddr, 0, 0);
+        readyQueue->p_s.status = ioStatus;
+    }
+    else if((IP & PRINTINTERRUPT) == PRINTINTERRUPT){
+        idbmA = (int *)0x10000040 + 0x0C;
+        *semaddr = &printer_sem[checkdevNo(*idbmA)];
         ioStatus = drA.devreg[PRNTINT-3][checkdevNo(idbmA)].dtp.status;
-        
-        acknowledge(PRNTINT,idbmA); 
+
+        acknowledge(PRNTINT,*idbmA); 
         SYSCALL (VERHOGEN, *semaddr, 0, 0);
         readyQueue->p_s.status = ioStatus;
     }
-    else if(IP == TERMINTERRUPT){
-        idbmA = (int* )0x10000040 + 0x10;
-        acknowledge(TERMINT,idbmA);
-        
+    else if((IP & TERMINTERRUPT) == TERMINTERRUPT){
+        idbmA = (int *)0x10000040 + 0x10;
+        acknowledge(TERMINT,*idbmA);
+
         if(choiceterm(idbmA)){
-            *semaddr = &transmitter_sem[checkdevNo(idbmA)];
+            *semaddr = &transmitter_sem[checkdevNo(*idbmA)];
             ioStatus = drA.devreg[TERMINT-3][checkdevNo(idbmA)].term.transm_status;
-        } else {
-            *semaddr = &receiver_sem[checkdevNo(idbmA)];
+        } 
+        else {
+            *semaddr = &receiver_sem[checkdevNo(*idbmA)];
             ioStatus = drA.devreg[TERMINT-3][checkdevNo(idbmA)].term.recv_status;
         }
+
         SYSCALL (VERHOGEN, *semaddr, 0, 0);
         readyQueue->p_s.status = ioStatus;
     }
