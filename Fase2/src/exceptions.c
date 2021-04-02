@@ -1,4 +1,5 @@
 #include "exceptions.h"
+#include "interrupts.h"
 
 void exceptionshandler(){
     /*for understanding which type of exception happened, need to get the execCode of the cause register.*/
@@ -8,6 +9,7 @@ void exceptionshandler(){
     switch (causeCode){
     case 0:
         /* Interrupt exception, so call Nucleus’s device interrupt handler*/
+	interruptHandler();
         break;
     case 1 ... 3 :
         /*TLB exception, so call Nucleus’s TLB exception handler*/
