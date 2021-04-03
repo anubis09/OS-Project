@@ -62,12 +62,16 @@ int isKernelModeP(unsigned int status){
     }
 }
 
-void *memcpy(void *src, void *dest){
-    int len = sizeof(src);
-    char *d = dest;
-    const char *s = src;
-    while (len--)
-      *d++ = *s++;
-    return dest;
+void assegnamentoStruct(pcb_PTR curr, state_t *proc_state){
+    curr->p_s.cause = proc_state->cause;
+    curr->p_s.entry_hi = proc_state->entry_hi;
+    for(int i=0;i<STATE_GPR_LEN;i++){
+        curr->p_s.gpr[i] = proc_state->gpr[i];
+    }
+    curr->p_s.hi = proc_state->hi;
+    curr->p_s.lo = proc_state->lo;
+    curr->p_s.pc_epc = proc_state->pc_epc;
+    curr->p_s.status = proc_state->status;
 }
+
 
