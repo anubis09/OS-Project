@@ -48,7 +48,7 @@ HIDDEN void retControl(state_t *proc_state, int isBlocking){
     }
     else{
         /*blocking syscall, updates the current process processor_status, and the processor time used.*/
-        currentProcess->p_s = *proc_state;
+        assegnamentoStruct(currentProcess,proc_state);
         currentProcess->p_time += updateTime();
         dispatch();
     }   
