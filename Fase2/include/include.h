@@ -62,5 +62,5 @@ int isKernelModeP(unsigned int);
 /*
     description of memcpy.
 */
-void *memcpy(void *, void *);
+void assegnamentoStruct(pcb_PTR curr, state_t *proc_state);
 #endif
