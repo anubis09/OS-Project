@@ -105,10 +105,11 @@ HIDDEN void terminate_process(pcb_PTR process){
             
     outProcQ(&readyQueue ,process);
     outChild(process);
-    
-    if(process->p_semAdd != NULL && *process->p_semAdd < 0){
+
+    /*errore di come è messa la condizione mi sa.*/
+    if(process->p_semAdd != NULL && *(process->p_semAdd) < 0){
         /*a valid semaphore*/
-        if(process->p_semAdd >= &device_Semaphore[0] ||
+        if(process->p_semAdd >= &device_Semaphore[0] &&
          process->p_semAdd <= &device_Semaphore[PSEUDOCLOCKSEM]){
             /*device semaphore*/
             softBlockCount--;
@@ -286,3 +287,4 @@ void passUp_Die(int except){
         LDCXT(stackPtr,status,pc);
     }
 }
+
