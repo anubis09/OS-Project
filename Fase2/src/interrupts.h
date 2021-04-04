@@ -3,7 +3,6 @@
 
 #include "../include/include.h"
 #include "initialize.h"
-//#include "exceptions.h"
 
 #define NETWORKINTERRUPT 0x00002000
 #define DEVREGBASE 0x10000054
