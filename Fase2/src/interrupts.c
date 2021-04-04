@@ -1,47 +1,51 @@
 #include "interrupts.h"
-#define NETWORKINTERRUPT 0x00002000
-#define DEVREGBASE 0x10000054
-#define STARTINTLINEDEVICE 3
-typedef unsigned int devregtr;
 
-HIDDEN int checkdevNo(unsigned int check){
-    if((DEV0ON & check) == DEV0ON)
+/*
+    given an specific Interrupting Devices Bit Map return the number of the device with the greatest priority which has an interrupt pending
+*/
+HIDDEN int checkdevNo(unsigned int address){
+    if((DEV0ON & address) == DEV0ON)
         return 0;
-    else if((DEV1ON & check) == DEV1ON)
+    else if((DEV1ON & address) == DEV1ON)
         return 1;
-    else if((DEV2ON & check) == DEV2ON)
+    else if((DEV2ON & address) == DEV2ON)
         return 2;
-    else if((DEV3ON & check) == DEV3ON)
+    else if((DEV3ON & address) == DEV3ON)
         return 3;
-    else if((DEV4ON & check) == DEV4ON)
+    else if((DEV4ON & address) == DEV4ON)
         return 4;
-    else if((DEV5ON & check) == DEV5ON)
+    else if((DEV5ON & address) == DEV5ON)
         return 5;
-    else if((DEV6ON & check) == DEV6ON)
+    else if((DEV6ON & address) == DEV6ON)
         return 6;   
     else
-        /*((DEV7ON & check) == 0b10000000)*/
         return 7;
 }
 
+/* 
+    returns the device register address associated with the given interrupt line and device number 
+*/
 HIDDEN devregtr *getDeviceRegAddr(int intLineNo, int devNo){
     return (devregtr *)(DEVREGBASE + (intLineNo-STARTINTLINEDEVICE)*0x80 + devNo*0x10);
 }
 
-HIDDEN int transmTerm(int idbmA, devregtr *devReg){
-    if((*(devReg + 2) & 0x00FF) == 5){
+/* 
+    function that returns TRUE if the terminal device is in a status of writing or FALSE if is on one of reading 
+*/
+HIDDEN int statusTerm(devregtr *devReg){
+    if((*(devReg + 2) & 0x00FF) == 5)
         return TRUE;
-    }
-    else{
+    else
         return FALSE;
-    }
 }
 
-
-HIDDEN void acknowledge(int interrupt, int idbmA, devregtr *devReg ){
+/* 
+    Acknowledge the outstanding interrupt.  This is accomplished by writing the acknowledge command code in the interrupting device’s device register 
+*/
+HIDDEN void acknowledge(int interrupt, devregtr *devReg ){
     devregtr *ack = NULL;
     if(interrupt == TERMINT){
-        if(transmTerm(idbmA, devReg)) ack = (devregtr *) (devReg + 3);
+        if(statusTerm(devReg)) ack = (devregtr *) (devReg + 3);
         else ack = (devregtr *) (devReg + 1);
     } 
     else ack = (devregtr *) (devReg + 1); 
@@ -49,6 +53,9 @@ HIDDEN void acknowledge(int interrupt, int idbmA, devregtr *devReg ){
     *ack = ACK;
 }
 
+/* 
+    check to see if the processor is the process is in a state of WAIT 
+*/
 HIDDEN int checkWait(state_t *proc_state){
     if((proc_state->status & TEBITON) == 0 && 
     (proc_state->status & IEPON) == IEPON &&
@@ -60,6 +67,10 @@ HIDDEN int checkWait(state_t *proc_state){
     }
 }
 
+/* 
+    Perform a V operation on the Nucleus maintained semaphore associated with the (sub)device. 
+    This operation should unblock the process which initiated this I/O operation
+*/
 HIDDEN pcb_PTR VDevice(int *semaddr){
     (*semaddr)++;
     pcb_PTR fp = removeBlocked(semaddr);
@@ -67,44 +78,48 @@ HIDDEN pcb_PTR VDevice(int *semaddr){
     return fp;
 }
 
-HIDDEN void externalDeviceint(unsigned int IP){
+/*
+    handler of non-timer interrups
+*/
+HIDDEN void externalDeviceint(unsigned int cause_IP){
     int *idbmA;
     int ioStatus, deviceInt, deviceNo, *semaddr = NULL;
     int isReceiver = 0;
     devregtr *devRegAddr;
-    if((IP & DISKINTERRUPT) == DISKINTERRUPT){
+
+    /* determine which device with an outstanding interrupt is the highest priority */
+    if((cause_IP & DISKINTERRUPT) == DISKINTERRUPT){
         idbmA = (int *)0x10000040;
         deviceInt = DISKINT;
         deviceNo = checkdevNo(*idbmA);
         devRegAddr = getDeviceRegAddr(deviceInt, deviceNo);
     }
-    else if((IP & FLASHINTERRUPT) == FLASHINTERRUPT){
+    else if((cause_IP & FLASHINTERRUPT) == FLASHINTERRUPT){
         idbmA = (int *)(0x10000040 + 0x04);
         deviceInt = FLASHINT;
         deviceNo = checkdevNo(*idbmA);
         devRegAddr = getDeviceRegAddr(deviceInt, deviceNo);
     }
-    else if((IP & NETWORKINTERRUPT) == NETWORKINTERRUPT){
+    else if((cause_IP & NETWORKINTERRUPT) == NETWORKINTERRUPT){
         idbmA = (int *)(0x10000040 + 0x08);
         deviceInt = NETWINT;
         deviceNo = checkdevNo(*idbmA);
         devRegAddr = getDeviceRegAddr(deviceInt, deviceNo);
     }
-    else if((IP & PRINTINTERRUPT) == PRINTINTERRUPT){
+    else if((cause_IP & PRINTINTERRUPT) == PRINTINTERRUPT){
         idbmA = (int *)(0x10000040 + 0x0C);
         deviceInt = PRNTINT;
         deviceNo = checkdevNo(*idbmA);
         devRegAddr = getDeviceRegAddr(deviceInt, deviceNo);
     }
-    else if((IP & TERMINTERRUPT) == TERMINTERRUPT){
+    else if((cause_IP & TERMINTERRUPT) == TERMINTERRUPT){
         idbmA = (int *)(0x10000040 + 0x10);
         deviceInt = TERMINT;
         deviceNo = checkdevNo(*idbmA);
         devRegAddr = getDeviceRegAddr(deviceInt, deviceNo);
 
-        if(transmTerm(*idbmA, devRegAddr)){
+        if(statusTerm(devRegAddr))
             ioStatus = *(devRegAddr + 2);
-        } 
         else {
             /*receiver */
             isReceiver = 1;
@@ -115,24 +130,34 @@ HIDDEN void externalDeviceint(unsigned int IP){
         PANIC();
     }
     if(deviceInt != TERMINT) ioStatus = *devRegAddr;
-    acknowledge(deviceInt, *idbmA, devRegAddr);
+
+    acknowledge(deviceInt, devRegAddr);
+
     semaddr = &device_Semaphore[(deviceInt-3+isReceiver)*8 + deviceNo];
     pcb_PTR unblocked_proc = VDevice(semaddr);
     if(unblocked_proc != NULL){
+        /*place the newly unblocked pcb in the readyqueue*/
         unblocked_proc->p_semAdd = NULL;
         unblocked_proc->p_s.reg_v0 = ioStatus;
         insertProcQ(&readyQueue, unblocked_proc);
         softBlockCount--;
     }
     state_t *proc_state = (state_t *)BIOSDATAPAGE;
+    
     if(checkWait(proc_state)){
+        /*goes back to the scheduler*/
         dispatch();
     }
     else{
+        /*return control to the current process*/
         LDST(proc_state);
     }
 }
 
+/*
+    Perform a V operation on the Nucleus maintained semaphore associated with the pseudo-clock. 
+    Unblock ALL pcbs associated with this semaphore.
+*/
 HIDDEN void VClock(){ 
     int *semaddr = &device_Semaphore[PSEUDOCLOCKSEM];
     pcb_PTR blocked_process = removeBlocked(semaddr);
@@ -146,15 +171,18 @@ HIDDEN void VClock(){
     device_Semaphore[PSEUDOCLOCKSEM] = 0;
 }
 
-HIDDEN void timerint(unsigned int IP){
+/*
+    handler of timer interrups
+*/
+HIDDEN void timerint(unsigned int cause_IP){
     state_t *proc_state = (state_t *)BIOSDATAPAGE;
-    if(IP == LOCALTIMERINT){
+    if(cause_IP == LOCALTIMERINT){
         updatePLT;
         assignStateT(&currentProcess->p_s, proc_state);
         currentProcess->p_time += TIMESLICE;
         insertProcQ(&readyQueue,currentProcess);
         dispatch();
-    } else if (IP == TIMERINTERRUPT){
+    } else if (cause_IP == TIMERINTERRUPT){
         LDIT(PSECOND);
         /*should unblock all pcbs on the semaphore.*/
         VClock();
@@ -168,7 +196,8 @@ HIDDEN void timerint(unsigned int IP){
     }
 }
 
-void interruptHandler(){    
+void interruptHandler(){  
+    /*for understanding which interrupt lines have pending interrupts*/  
     unsigned int causeCode = 0xFF00 & getCAUSE();
 
     if((causeCode & LOCALTIMERINT) == LOCALTIMERINT){
@@ -181,5 +210,4 @@ void interruptHandler(){
         externalDeviceint(causeCode);
     }
 }
-
 
