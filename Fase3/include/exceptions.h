@@ -24,9 +24,8 @@ void syscallDispatcher();
 */
 void programTrapHandler();
 
-
 /*
-    A TLB exception occurs whenμMPS3 fails in an attempt to translate a logicaladdress into its corresponding physical address.
+    A TLB exception occurs when μMPS3 fails in an attempt to translate a logical address into its corresponding physical address.
     This function take actions after a TLB exception occurs. 
 */
 void TLB_Handler();

@@ -28,7 +28,7 @@ pcb_PTR mkEmptyProcQ();
 
 /*Return TRUE if the queue whose tail is pointed to by tp is empty.
 Return FALSE otherwise.*/
-int emptyProcQ(pcb_PTR p);
+int emptyProcQ(pcb_PTR tp);
 
 /*Insert the pcb pointed to by p into the process queue whose tail-
 pointer is pointed to by tp.*/
@@ -48,7 +48,7 @@ pcb_PTR outProcQ(pcb_PTR *tp, pcb_PTR p);
 /*Return a pointer to the first pcb from the process queue whose tail
 is pointed to by tp. Do not remove this pcbfrom the process queue.
 Return NULL if the process queue is empty.*/
-pcb_PTR headProcQ(pcb_PTR );
+pcb_PTR headProcQ(pcb_PTR);
 
 /*Process Tree Maintenance*/
 

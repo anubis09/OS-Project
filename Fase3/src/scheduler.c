@@ -8,21 +8,27 @@
     Checks if the scheduler should dispatch a new process(PROCEEDPATH), 
     halt execution(HALTPATH), wait(WAITPATH), or panic(PANICPATH)
 */
-HIDDEN int check(){
-    if(!emptyProcQ(readyQueue)){
+HIDDEN int check()
+{
+    if (!emptyProcQ(readyQueue))
+    {
         /*Ready queue isn't empty*/
         return PROCEEDPATH;
     }
-    else{
-        if(processCount == 0){
+    else
+    {
+        if (processCount == 0)
+        {
             /*All processes are terminated*/
             return HALTPATH;
         }
-        else if(processCount > 0 && softBlockCount > 0){
+        else if (processCount > 0 && softBlockCount > 0)
+        {
             /*Some process are blocked on an I/O or timer request, so we wait for them*/
             return WAITPATH;
         }
-        else{
+        else
+        {
             /*DEADLOCK processCount > 0 && softBlockCount == 0*/
             return PANICPATH;
         }
@@ -32,7 +38,8 @@ HIDDEN int check(){
 /*
     For a wait operation, we have to ensure to have PC0 status with interrupt bits on, and PLT bit off
 */
-HIDDEN void prepWait(){
+HIDDEN void prepWait()
+{
     unsigned int status = getSTATUS();
     /*Switch on interrupt bits*/
     status |= IECON | IMON;
@@ -42,9 +49,11 @@ HIDDEN void prepWait(){
     setSTATUS(status);
 }
 
-void scheduler(){
+void scheduler()
+{
     int path = check();
-    switch (path){
+    switch (path)
+    {
     case HALTPATH:
         HALT();
         break;
@@ -63,4 +72,3 @@ void scheduler(){
         break;
     }
 }
-

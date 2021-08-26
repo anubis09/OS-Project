@@ -8,10 +8,10 @@
 /*Integer indicating the number of started, but not yet terminated processes.*/
 int processCount;
 
-/*This integer is the numberof started, but not terminated processes that in are the “blocked” statedue to an I/O or timer request.*/
+/*This integer is the number of started, but not terminated processes that are in the “blocked” state due to an I/O or timer request.*/
 int softBlockCount;
 
-/* Tail pointer to a queue ofpcbs that are in the “ready” state.*/
+/* Tail pointer to a queue of pcbs that are in the “ready” state.*/
 pcb_PTR readyQueue;
 
 /*Pointer to thepcbthat is in the “running” state, i.e.the current executing process.*/
