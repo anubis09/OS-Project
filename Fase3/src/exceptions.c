@@ -372,7 +372,7 @@ void uTLB_RefillHandler()
     unsigned int entry_hi = proc_state->entry_hi;
     //here i am getting the VPN, then i am only taking the last 2 hexa digits
     //because they defines the offseet in the pagetable entry.
-    int pT_Entry = ((entry_hi | GETPAGENO) >> VPNSHIFT) & 0xFF;
+    int pT_Entry = ((entry_hi & GETPAGENO) >> VPNSHIFT) & 0xFF;
     unsigned int entry_lo;
     entry_lo = currentProcess->p_supportStruct->sup_privatePgTbl[pT_Entry].pte_entryLO;
     setENTRYHI(entry_hi);

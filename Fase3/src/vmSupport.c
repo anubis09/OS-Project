@@ -1,6 +1,9 @@
 #include "../include/vmSupport.h"
 
 #define SWAPSIZE UPROCMAX * 2
+#define MODIFICATIONEXCEPTION 1
+#define LOADEXCEPTION 2
+#define STOREEXCEPTION 3
 #define SWAPSTART 0x20020000
 
 HIDDEN swap_t swapPoll_table[SWAPSIZE];
@@ -26,4 +29,21 @@ void initSwapStructs()
         swapPoll_table[i].sw_pageNo = 0;
         swapPoll_table[i].sw_pte = NULL;
     }
+}
+
+void pageFaultHandler()
+{
+    support_t *sup_struct = SYSCALL(GETSUPPORTPTR, 0, 0, 0);
+    unsigned int cause = (sup_struct->sup_exceptState[PGFAULTEXCEPT].cause & GETEXECCODE) >> CAUSESHIFT;
+    if (cause == MODIFICATIONEXCEPTION)
+    {
+        /*TRATTARE COME UN PROGRAM TRAP.*/
+    }
+    else
+    {
+        SYSCALL(PASSEREN, (int)&swptSemaphore, 0, 0);
+        unsigned int entry_hi = sup_struct->sup_exceptState->entry_hi;
+        unsigned int vpn = ((entry_hi & GETPAGENO) >> VPNSHIFT) & 0xFF;
+        /*adesso dobbiamo pickare un frame e andiamo a vedere come cavolo si fa nel pome*/
+        }
 }
