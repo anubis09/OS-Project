@@ -61,7 +61,7 @@ void pageFaultHandler()
                 This frame is occupied, we assume it's occupied by logical page n k, 
                 belonging to proc x(ASID) and that is dirty.
             */
-            entry.sw_pte->pte_entryLO &(VALIDON ^ 0xFFFFFFFF);
+            entry.sw_pte->pte_entryLO &= (VALIDON ^ 0xFFFFFFFF);
             /*
                 we xor validon with 0xFFFFFFFF, which means we are changing all
                 bits on to off, and viceversa. so we can now set the valid bit off
