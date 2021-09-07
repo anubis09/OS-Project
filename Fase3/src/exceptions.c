@@ -370,8 +370,8 @@ void uTLB_RefillHandler()
 {
     state_t *proc_state = (state_t *)BIOSDATAPAGE;
     unsigned int entry_hi = proc_state->entry_hi;
-    //here i am getting the VPN, then i am only taking the last 2 hexa digits
-    //because they defines the offseet in the pagetable entry.
+    /*here i am getting the VPN, then i am only taking the last 2 hexa digits
+    because they defines the offseet in the pagetable entry.*/
     int pT_Entry = ((entry_hi & GETPAGENO) >> VPNSHIFT) & 0xFF;
     unsigned int entry_lo;
     entry_lo = currentProcess->p_supportStruct->sup_privatePgTbl[pT_Entry].pte_entryLO;
@@ -379,7 +379,7 @@ void uTLB_RefillHandler()
     setENTRYLO(entry_lo);
     TLBWR();
     LDST(proc_state);
-    /*
+    /* 
     setENTRYHI(0x80000000);
     setENTRYLO(0x00000000);
     TLBWR();
