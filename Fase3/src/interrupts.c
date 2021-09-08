@@ -1,11 +1,7 @@
 #include "../include/interrupts.h"
-#define NETWORKINTERRUPT 0x00002000
-#define INTERPROCINT 0x00000100
-#define DEVREGBASE 0x10000054
 #define BITMAPBASEADDR 0x10000040
 #define TERMSTATREAD 0xFF
 #define GETIP 0xFF00
-#define CHARTRANSMITTED 5
 #define STARTINTLINEDEVICE 3
 
 typedef unsigned int devregtr;
@@ -47,7 +43,7 @@ HIDDEN devregtr *getDeviceRegAddr(int intLineNo, int devNo)
 */
 HIDDEN int statusTerm(devregtr *devReg)
 {
-    if ((*(devReg + 2) & TERMSTATREAD) == CHARTRANSMITTED)
+    if ((*(devReg + 2) & TERMSTATREAD) == OKCHARTRANS)
         return TRUE;
     else
         return FALSE;
