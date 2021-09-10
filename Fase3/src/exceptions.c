@@ -120,7 +120,7 @@ HIDDEN void terminate_SubTree(pcb_PTR process)
     /*Remove the process from the ready queue, if isn't in there, outprocQ returns NULL*/
     outProcQ(&readyQueue, process);
     outChild(process);
-    if (process->p_semAdd != NULL && *(process->p_semAdd) <= 0)
+    if (process->p_semAdd != NULL && *(process->p_semAdd) < 0)
     {
         /*A valid semaphore*/
         if (process->p_semAdd >= &device_Semaphore[0] &&

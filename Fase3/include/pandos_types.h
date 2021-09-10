@@ -67,4 +67,10 @@ typedef struct swap_t
     pteEntry_t *sw_pte; /* page's PTE entry.	*/
 } swap_t;
 
+typedef struct mutualExclusion_Semaphore
+{
+    int semVal;
+    int asidProcInside;
+} mutualExclusion_Semaphore;
+
 #endif

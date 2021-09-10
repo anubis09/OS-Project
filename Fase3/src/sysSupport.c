@@ -1,14 +1,42 @@
 #include "../include/sysSupport.h"
 
-void supportSyscallDispatcher(support_t *sup_struct)
+void programTrap(int asid)
 {
+    freeME(asid);
+    /*TERMINATE()*/
 }
 
-void programTrap()
+HIDDEN void retControl(state_t *proc_state)
 {
-    /*TERMINATE()*/
-    /*non dobbiamo mettere a posto i semafori perchè ci pensa già
-    la syscall 2*/
+    proc_state->pc_epc += WORDLEN;
+    LDST(proc_state);
+}
+
+void supportSyscallDispatcher(support_t *sup_struct)
+{
+    int sysType = sup_struct->sup_exceptState[GENERALEXCEPT].reg_a0;
+    switch (sysType)
+    {
+    case TERMINATE:
+        /* code */
+        break;
+    case GET_TOD:
+        /* code */
+        break;
+    case WRITEPRINTER:
+        /* code */
+        break;
+    case WRITETERMINAL:
+        /* code */
+        break;
+    case READTERMINAL:
+        /* code */
+        break;
+    default:
+        /*syscode > 13*/
+        programTrap(sup_struct->sup_asid);
+        break;
+    }
 }
 
 void generalExceptionHandler()
@@ -21,7 +49,7 @@ void generalExceptionHandler()
         supportSyscallDispatcher(sup_struct);
         break;
     default:
-        programTrap(sup_struct);
+        programTrap(sup_struct->sup_asid);
         break;
     }
 }
