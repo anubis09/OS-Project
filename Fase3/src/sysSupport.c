@@ -6,15 +6,17 @@ void programTrap(int asid)
     /*TERMINATE()*/
 }
 
-HIDDEN void retControl(state_t *proc_state)
+/*al posto di devNo bisogna mettere asid - 1 e al posto di intLineNo TERMINT per terminale*/
+HIDDEN devregtr *getDeviceRegAddr(int intLineNo, int devNo)
 {
-    proc_state->pc_epc += WORDLEN;
-    LDST(proc_state);
+    return (devregtr *)(DEVREGBASE + (intLineNo - STARTINTLINEDEVICE) * 0x80 + devNo * 0x10);
 }
 
 void supportSyscallDispatcher(support_t *sup_struct)
 {
-    int sysType = sup_struct->sup_exceptState[GENERALEXCEPT].reg_a0;
+    state_t *proc_state = &sup_struct->sup_exceptState[GENERALEXCEPT];
+    int asid = sup_struct->sup_asid;
+    int sysType = proc_state->reg_a0;
     switch (sysType)
     {
     case TERMINATE:
@@ -37,6 +39,8 @@ void supportSyscallDispatcher(support_t *sup_struct)
         programTrap(sup_struct->sup_asid);
         break;
     }
+    proc_state->pc_epc += WORDLEN;
+    LDST(proc_state);
 }
 
 void generalExceptionHandler()

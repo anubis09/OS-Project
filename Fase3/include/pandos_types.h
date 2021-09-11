@@ -73,4 +73,6 @@ typedef struct mutualExclusion_Semaphore
     int asidProcInside;
 } mutualExclusion_Semaphore;
 
+typedef unsigned int devregtr;
+
 #endif

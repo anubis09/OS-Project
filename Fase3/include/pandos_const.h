@@ -167,6 +167,7 @@
 
 #define UPROCMAX 8
 #define POOLSIZE (UPROCMAX * 2)
+#define STARTINTLINEDEVICE 3
 /* End of Mikeyg constants */
 
 #endif

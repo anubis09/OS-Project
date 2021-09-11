@@ -2,9 +2,6 @@
 #define BITMAPBASEADDR 0x10000040
 #define TERMSTATREAD 0xFF
 #define GETIP 0xFF00
-#define STARTINTLINEDEVICE 3
-
-typedef unsigned int devregtr;
 
 /*
     Given an specific Interrupting Devices Bit Map return the number of the device 
