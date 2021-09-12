@@ -10,6 +10,8 @@
 #define SUPDEVSEMNUM 3
 
 void freeME(int asid);
+void atomicON();
+void atomicOFF();
 
 mutualExclusion_Semaphore supportDeviceSemaphore[3];
 

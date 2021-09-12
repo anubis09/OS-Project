@@ -1,4 +1,6 @@
 #include "../include/sysSupport.h"
+#define TERMSTATMASK 0xFF
+#define TERMCHARRECVMASK 0xFF00
 
 void programTrap(int asid)
 {
@@ -12,11 +14,63 @@ HIDDEN devregtr *getDeviceRegAddr(int intLineNo, int devNo)
     return (devregtr *)(DEVREGBASE + (intLineNo - STARTINTLINEDEVICE) * 0x80 + devNo * 0x10);
 }
 
+HIDDEN int isKuseg(unsigned int addr)
+{
+    if (addr >= KUSEG)
+        return TRUE;
+    else
+        return FALSE;
+}
+
+HIDDEN void readFromTerminal(state_t *procState, int asid)
+{
+    char *string = (char *)procState->reg_a1;
+    if (isKuseg(string) == TRUE)
+    {
+        devregtr *base = getDeviceRegAddr(TERMINT, asid - 1);
+        unsigned int status;
+        int nChar = 0, isNotOver = TRUE;
+        SYSCALL(PASSEREN, 0, 0, 0); /*DA MODIFIICARE CON IL SEMAFORO APPROPRIATO*/
+        while (isNotOver)
+        {
+            atomicON();
+            *(base + 1) = RECEIVECHAR;
+            status = SYSCALL(IOWAIT, TERMINT, asid - 1, TRUE);
+            atomicOFF();
+            if ((status & TERMSTATMASK) != OKCHARRECV)
+            {
+                procState->reg_v0 = -1 * (status & TERMSTATMASK);
+                isNotOver = FALSE;
+            }
+            else
+            {
+                char c = (char)(status & TERMCHARRECVMASK);
+                if (c == '\n')
+                {
+                    isNotOver = FALSE;
+                    procState->reg_v0 = nChar;
+                }
+                else
+                {
+                    *string = c;
+                    string++;
+                    nChar++;
+                }
+            }
+        }
+        SYSCALL(VERHOGEN, 0, 0, 0);
+    }
+    else
+    {
+        /*chiamare la funzione terminate!*/
+    }
+}
+
 void supportSyscallDispatcher(support_t *sup_struct)
 {
-    state_t *proc_state = &sup_struct->sup_exceptState[GENERALEXCEPT];
+    state_t *procState = &sup_struct->sup_exceptState[GENERALEXCEPT];
     int asid = sup_struct->sup_asid;
-    int sysType = proc_state->reg_a0;
+    int sysType = procState->reg_a0;
     switch (sysType)
     {
     case TERMINATE:
@@ -32,15 +86,15 @@ void supportSyscallDispatcher(support_t *sup_struct)
         /* code */
         break;
     case READTERMINAL:
-        /* code */
+        readFromTerminal(procState, asid);
         break;
     default:
         /*syscode > 13*/
-        programTrap(sup_struct->sup_asid);
+        programTrap(asid);
         break;
     }
-    proc_state->pc_epc += WORDLEN;
-    LDST(proc_state);
+    procState->pc_epc += WORDLEN;
+    LDST(procState);
 }
 
 void generalExceptionHandler()

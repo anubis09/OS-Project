@@ -58,14 +58,14 @@ HIDDEN int getPointer()
     return pointer;
 }
 
-HIDDEN void atomicON()
+void atomicON()
 {
     unsigned int status = getSTATUS();
     status &= DISABLEINTS;
     setSTATUS(status);
 }
 
-HIDDEN void atomicOFF()
+void atomicOFF()
 {
     unsigned int status = getSTATUS();
     status |= IECON;

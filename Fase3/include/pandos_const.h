@@ -114,7 +114,9 @@
 #define DEV7ON 0x00000080
 
 #define OKCHARTRANS 5
+#define OKCHARRECV 5
 #define TRANSMITCHAR 2
+#define RECEIVECHAR 2
 
 #define SEEKTOCYL 2
 #define DISKREAD 3
