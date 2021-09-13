@@ -61,6 +61,7 @@
 
 /* Status register constants */
 #define ALLOFF 0x00000000
+#define ALLBITSON 0xFFFFFFFF
 #define USERPON 0x00000008
 #define IEPON 0x00000004
 #define IECON 0x00000001

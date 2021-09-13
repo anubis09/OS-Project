@@ -2,12 +2,6 @@
 #define TERMSTATMASK 0xFF
 #define TERMCHARRECVMASK 0xFF00
 
-void programTrap(int asid)
-{
-    freeME(asid);
-    /*TERMINATE()*/
-}
-
 /*al posto di devNo bisogna mettere asid - 1 e al posto di intLineNo TERMINT per terminale*/
 HIDDEN devregtr *getDeviceRegAddr(int intLineNo, int devNo)
 {
@@ -22,10 +16,60 @@ HIDDEN int isKuseg(unsigned int addr)
         return FALSE;
 }
 
+HIDDEN void terminate()
+{
+    SYSCALL(TERMPROCESS, 0, 0, 0);
+}
+
+HIDDEN void getTod(state_t *procState)
+{
+    unsigned int tod;
+    STCK(tod);
+    procState->reg_v0 = tod;
+}
+
+HIDDEN void writeToPrinter(state_t *procState, int asid)
+{
+    char *text = (char *)procState->reg_a1;
+    int len = (int)procState->reg_a2;
+
+    if (isKuseg((memaddr)text) == TRUE && len >= 1 && len <= 128)
+    {
+        devregtr *printerReg = getDeviceRegAddr(PRNTINT, asid - 1);
+        int status, nchar = 0;
+
+        //SYSCALL(PASSEREN, 0, 0, 0);
+        while (*text != EOS)
+        {
+            atomicON();
+            *(printerReg + 1) = RECEIVECHAR;
+            status = SYSCALL(IOWAIT, PRNTINT, asid - 1, TRUE);
+            atomicOFF();
+
+            if (status != 1)
+            {
+                break;
+            }
+            text++;
+            nchar++;
+        }
+        if (status == 1)
+        {
+            procState->reg_v0 = nchar;
+        }
+
+        //SYSCALL(VERHOGEN, 0, 0, 0);
+    }
+    else
+    {
+        terminate();
+    }
+}
+
 HIDDEN void readFromTerminal(state_t *procState, int asid)
 {
     char *string = (char *)procState->reg_a1;
-    if (isKuseg(string) == TRUE)
+    if (isKuseg((memaddr)string) == TRUE)
     {
         devregtr *base = getDeviceRegAddr(TERMINT, asid - 1);
         unsigned int status;
@@ -58,12 +102,18 @@ HIDDEN void readFromTerminal(state_t *procState, int asid)
                 }
             }
         }
-        SYSCALL(VERHOGEN, 0, 0, 0);
+        SYSCALL(VERHOGEN, 0, 0, 0); /*anche qui serve il semaforo fra*/
     }
     else
     {
-        /*chiamare la funzione terminate!*/
+        terminate();
     }
+}
+
+void programTrap(int asid)
+{
+    freeME(asid);
+    terminate();
 }
 
 void supportSyscallDispatcher(support_t *sup_struct)
@@ -74,13 +124,13 @@ void supportSyscallDispatcher(support_t *sup_struct)
     switch (sysType)
     {
     case TERMINATE:
-        /* code */
+        terminate();
         break;
     case GET_TOD:
-        /* code */
+        getTod(procState);
         break;
     case WRITEPRINTER:
-        /* code */
+        writeToPrinter(procState, asid);
         break;
     case WRITETERMINAL:
         /* code */

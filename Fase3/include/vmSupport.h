@@ -1,18 +1,13 @@
 #ifndef VMSUPPORT_H
 #define VMSUPPORT_H
 
-#include "../include/include.h"
-#include "../include/sysSupport.h"
+#include "include.h"
+#include "sysSupport.h"
+#include "initProc.h"
 
-#define FLASH 0
-#define PRINTER 1
-#define TERMINAL 2
-#define SUPDEVSEMNUM 3
-
+void initSwapStructs();
 void freeME(int asid);
 void atomicON();
 void atomicOFF();
-
-mutualExclusion_Semaphore supportDeviceSemaphore[3];
-
+void pageFaultHandler();
 #endif

@@ -1,22 +1,11 @@
 #include "../include/vmSupport.h"
 
 #define SWAPSTART 0x20020000
-#define ALLBITSON 0xFFFFFFFF
 
 HIDDEN swap_t swapPool_table[POOLSIZE];
 HIDDEN mutualExclusion_Semaphore swptSemaphore;
 
-HIDDEN void initSuppSem()
-{
-    swptSemaphore.semVal = 1;
-    swptSemaphore.asidProcInside = -1;
-    for (int i = 0; i < SUPDEVSEMNUM; i++)
-    {
-        supportDeviceSemaphore[i].semVal = 1;
-        supportDeviceSemaphore[i].asidProcInside = -1;
-    }
-}
-
+/*questa ci sta che sia qui*/
 void freeME(int asid)
 {
     if (swptSemaphore.asidProcInside == asid)
@@ -25,9 +14,9 @@ void freeME(int asid)
     }
     for (int i = 0; i < SUPDEVSEMNUM; i++)
     {
-        if (supportDeviceSemaphore[i].asidProcInside == asid)
+        if (supportDeviceSemaphores[i].asidProcInside == asid)
         {
-            SYSCALL(VERHOGEN, (int)&supportDeviceSemaphore[i].semVal, 0, 0);
+            SYSCALL(VERHOGEN, (int)&(supportDeviceSemaphores[i].semVal), 0, 0);
         }
     }
 }
@@ -48,7 +37,8 @@ void initSwapStructs()
         swapPool_table[i].sw_pageNo = 0;
         swapPool_table[i].sw_pte = NULL;
     }
-    initSuppSem(); /*PER ORA RIMANE QUI MA POI LO SPOSTIAMO*/
+    swptSemaphore.semVal = 1;
+    swptSemaphore.asidProcInside = -1;
 }
 
 HIDDEN int getPointer()
@@ -78,8 +68,8 @@ void atomicOFF()
 */
 HIDDEN void flashOperation(int asid, unsigned int flashAddr, int physicalAddr, int command)
 {
-    SYSCALL(PASSEREN, (int)&(supportDeviceSemaphore[FLASH].semVal), 0, 0);
-    supportDeviceSemaphore[FLASH].asidProcInside = asid;
+    SYSCALL(PASSEREN, (int)&(supportDeviceSemaphores[FLASH].semVal), 0, 0);
+    supportDeviceSemaphores[FLASH].asidProcInside = asid;
     /*individuo il corretto flash device.*/
     unsigned int *devRegAddr = (unsigned int *)(DEVREGBASE + (0x80 + (asid - 1) * 0x10));
     *(devRegAddr + 2) = physicalAddr;
@@ -87,8 +77,8 @@ HIDDEN void flashOperation(int asid, unsigned int flashAddr, int physicalAddr, i
     *(devRegAddr + 1) = flashAddr | command;
     int statusCode = SYSCALL(IOWAIT, FLASHINT, asid - 1, 0);
     atomicOFF();
-    supportDeviceSemaphore[FLASH].asidProcInside = -1;
-    SYSCALL(VERHOGEN, (int)&(supportDeviceSemaphore[FLASH].semVal), 0, 0);
+    supportDeviceSemaphores[FLASH].asidProcInside = -1;
+    SYSCALL(VERHOGEN, (int)&(supportDeviceSemaphores[FLASH].semVal), 0, 0);
     if (statusCode >= 2 || statusCode == 0)
     {
         programTrap(asid);

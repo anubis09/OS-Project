@@ -195,7 +195,7 @@ HIDDEN void Passeren(state_t *proc_state)
     Verhogen (V) (SYS4)
     This service requests the Nucleus to perform a V operation on a semaphore.
 */
-void Verhogen(state_t *proc_state)
+HIDDEN void Verhogen(state_t *proc_state)
 {
     int *semaddr = (int *)proc_state->reg_a1;
     if (semaddr != NULL)
