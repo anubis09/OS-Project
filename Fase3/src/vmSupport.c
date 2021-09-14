@@ -10,7 +10,7 @@ void freeME(int asid)
 {
     if (swptSemaphore.asidProcInside == asid)
     {
-        SYSCALL(VERHOGEN, (int)&swptSemaphore.semVal, 0, 0);
+        SYSCALL(VERHOGEN, (int)&(swptSemaphore.semVal), 0, 0);
     }
     else
     {
@@ -74,17 +74,17 @@ HIDDEN void flashOperation(int asid, unsigned int page, memaddr physicalAddr, in
 {
     /*cambiare come prendiamo il semaforo, ma quello lo famo successivamente*/
     mutualExclusion_Semaphore *flashSem = getSupDevSem(FLASH, asid, FALSE);
-    SYSCALL(PASSEREN, (int)flashSem->semVal, 0, 0);
+    SYSCALL(PASSEREN, (int)&(flashSem->semVal), 0, 0);
     flashSem->asidProcInside = asid;
     /*individuo il corretto flash device.*/
     memaddr *devRegAddr = (memaddr *)(DEVREGBASE + (0x80 + (asid - 1) * 0x10));
     *(devRegAddr + 2) = physicalAddr;
     atomicON();
     *(devRegAddr + 1) = (page << 8) | command;
-    int statusCode = SYSCALL(IOWAIT, FLASHINT, asid - 1, 0);
+    int statusCode = SYSCALL(IOWAIT, FLASHINT, asid - 1, FALSE);
     atomicOFF();
     supportDeviceSemaphores[FLASH].asidProcInside = -1;
-    SYSCALL(VERHOGEN, (int)flashSem->semVal, 0, 0);
+    SYSCALL(VERHOGEN, (int)&(flashSem->semVal), 0, 0);
     if (statusCode != READY)
     {
         programTrap(asid);
@@ -102,7 +102,7 @@ void pageFaultHandler()
     }
     else
     {
-        SYSCALL(PASSEREN, (int)&swptSemaphore, 0, 0);
+        SYSCALL(PASSEREN, (int)&(swptSemaphore.semVal), 0, 0);
         swptSemaphore.asidProcInside = asid;
         unsigned int entry_hi = sup_struct->sup_exceptState[PGFAULTEXCEPT].entry_hi;
         unsigned int page = ((entry_hi & GETPAGENO) >> VPNSHIFT) & 0xFF;
@@ -146,7 +146,7 @@ void pageFaultHandler()
         TLBCLR();
         atomicOFF();
         swptSemaphore.asidProcInside = -1;
-        SYSCALL(VERHOGEN, (int)&swptSemaphore, 0, 0);
+        SYSCALL(VERHOGEN, (int)&(swptSemaphore.semVal), 0, 0);
         LDST(&(sup_struct->sup_exceptState[PGFAULTEXCEPT]));
     }
 }

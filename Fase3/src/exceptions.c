@@ -376,10 +376,9 @@ void uTLB_RefillHandler()
     int pT_Entry = ((entry_hi & GETPAGENO) >> VPNSHIFT) & 0xFF;
     if (pT_Entry > 30) /*check se è lo stack.*/
         pT_Entry = 31;
-    unsigned int entry_lo;
-    entry_lo = currentProcess->p_supportStruct->sup_privatePgTbl[pT_Entry].pte_entryLO;
-    setENTRYHI(entry_hi);
-    setENTRYLO(entry_lo);
+    pteEntry_t pageTable_Entry = currentProcess->p_supportStruct->sup_privatePgTbl[pT_Entry];
+    setENTRYHI(pageTable_Entry.pte_entryHI);
+    setENTRYLO(pageTable_Entry.pte_entryLO);
     TLBWR();
     LDST(proc_state);
     /*
