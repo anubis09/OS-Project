@@ -18,6 +18,7 @@
 mutualExclusion_Semaphore supportDeviceSemaphores[32];
 int masterSemaphore;
 
+void istantiatorProcess();
 mutualExclusion_Semaphore *getSupDevSem(int devType, int devNum, int isReceiver);
 
 #endif

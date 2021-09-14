@@ -40,8 +40,8 @@ void main()
     /*Interrupts  enabled,  the  processorLocal Timer enabled,  kernel-mode on*/
     adam->p_s.status = IEPON | IMON | TEBITON;
     RAMTOP(adam->p_s.reg_sp);
-    adam->p_s.pc_epc = (memaddr)test;
-    adam->p_s.reg_t9 = (memaddr)test;
+    adam->p_s.pc_epc = (memaddr)istantiatorProcess;
+    adam->p_s.reg_t9 = (memaddr)istantiatorProcess;
     adam->p_prnt = NULL;
     adam->p_child = NULL;
     adam->p_next_sib = NULL;

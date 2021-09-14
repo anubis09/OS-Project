@@ -1,7 +1,8 @@
 #ifndef INITIALIZE_H
 #define INITIALIZE_H
 
-#include "../include/include.h"
+#include "include.h"
+#include "initProc.h"
 #define SEMAPHORENUM 49
 #define PSEUDOCLOCKSEM 48
 
