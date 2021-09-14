@@ -1,8 +1,9 @@
 #ifndef SYSUPPORT_H
 #define SYSUPPORT_H
 
-#include "../include/include.h"
-#include "../include/vmSupport.h"
+#include "include.h"
+#include "vmSupport.h"
+#include "initProc.h"
 
 void supportSyscallDispatcher(support_t *sup_struct);
 

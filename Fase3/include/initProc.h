@@ -16,6 +16,7 @@
     24-31 TERM RECEIVER
 */
 mutualExclusion_Semaphore supportDeviceSemaphores[32];
+int masterSemaphore;
 
 mutualExclusion_Semaphore *getSupDevSem(int devType, int devNum, int isReceiver);
 

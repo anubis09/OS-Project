@@ -18,6 +18,7 @@ HIDDEN int isKuseg(unsigned int addr)
 
 HIDDEN void terminate()
 {
+    SYSCALL(VERHOGEN, (int)&masterSemaphore, 0, 0);
     SYSCALL(TERMPROCESS, 0, 0, 0);
 }
 
@@ -32,22 +33,24 @@ HIDDEN void writeToPrinter(state_t *procState, int asid)
 {
     char *text = (char *)procState->reg_a1;
     int len = (int)procState->reg_a2;
-
-    if (isKuseg((memaddr)text) == TRUE && len >= 1 && len <= 128)
+    if (isKuseg((memaddr)text) == TRUE && len >= 1 && len <= MAXSTRLENG)
     {
         devregtr *printerReg = getDeviceRegAddr(PRNTINT, asid - 1);
         int status, nchar = 0;
-
-        //SYSCALL(PASSEREN, 0, 0, 0);
+        mutualExclusion_Semaphore *printerSem = getSupDevSem(PRINTER, asid, FALSE);
+        printerSem->asidProcInside = asid;
+        SYSCALL(PASSEREN, (int)printerSem->semVal, 0, 0);
         while (*text != EOS)
         {
+            *(printerReg + 2) = (unsigned int)*text;
             atomicON();
-            *(printerReg + 1) = RECEIVECHAR;
-            status = SYSCALL(IOWAIT, PRNTINT, asid - 1, TRUE);
+            *(printerReg + 1) = PRINTCHAR;
+            status = SYSCALL(IOWAIT, PRNTINT, asid - 1, FALSE);
             atomicOFF();
 
             if (status != 1)
             {
+                procState->reg_v0 = -1 * status;
                 break;
             }
             text++;
@@ -57,12 +60,57 @@ HIDDEN void writeToPrinter(state_t *procState, int asid)
         {
             procState->reg_v0 = nchar;
         }
-
-        //SYSCALL(VERHOGEN, 0, 0, 0);
+        printerSem->asidProcInside = -1;
+        SYSCALL(VERHOGEN, (int)printerSem->semVal, 0, 0);
     }
     else
     {
-        terminate();
+        terminate(asid);
+    }
+}
+
+HIDDEN void writeToTerminal(state_t *procState, int asid)
+{
+    char *text = (char *)procState->reg_a1;
+    int len = (int)procState->reg_a2;
+
+    if (isKuseg((memaddr)text) == TRUE && len >= 0 && len <= MAXSTRLENG)
+    {
+        devregtr *termReg = getDeviceRegAddr(TERMINT, asid - 1);
+        int status, nChar = 0;
+
+        mutualExclusion_Semaphore *transmitterSem = getSupDevSem(TERMINAL, asid, FALSE);
+        transmitterSem->asidProcInside = asid;
+        SYSCALL(PASSEREN, (int)transmitterSem->semVal, 0, 0);
+
+        while (*text != EOS)
+        {
+
+            atomicON();
+            *(termReg + 3) = (*text << BYTELENGTH) | TRANSMITCHAR;
+            status = SYSCALL(IOWAIT, TERMINT, asid - 1, FALSE);
+            atomicOFF();
+
+            if ((status & TERMSTATMASK) != OKCHARRECV)
+            {
+                procState->reg_v0 = -1 * (status & TERMSTATMASK);
+                break;
+            }
+
+            nChar++;
+            text++;
+        }
+
+        if ((status & TERMSTATMASK) != OKCHARRECV)
+        {
+            procState->reg_v0 = nChar;
+        }
+        transmitterSem->asidProcInside = -1;
+        SYSCALL(VERHOGEN, (int)transmitterSem->semVal, 0, 0);
+    }
+    else
+    {
+        terminate(asid);
     }
 }
 
@@ -74,7 +122,9 @@ HIDDEN void readFromTerminal(state_t *procState, int asid)
         devregtr *base = getDeviceRegAddr(TERMINT, asid - 1);
         unsigned int status;
         int nChar = 0, isNotOver = TRUE;
-        SYSCALL(PASSEREN, 0, 0, 0); /*DA MODIFIICARE CON IL SEMAFORO APPROPRIATO*/
+        mutualExclusion_Semaphore *receiverSem = getSupDevSem(TERMINAL, asid, TRUE);
+        receiverSem->asidProcInside = asid;
+        SYSCALL(PASSEREN, (int)receiverSem->semVal, 0, 0);
         while (isNotOver)
         {
             atomicON();
@@ -88,7 +138,7 @@ HIDDEN void readFromTerminal(state_t *procState, int asid)
             }
             else
             {
-                char c = (char)(status & TERMCHARRECVMASK);
+                char c = (char)((status & TERMCHARRECVMASK) >> BYTELENGTH);
                 if (c == '\n')
                 {
                     isNotOver = FALSE;
@@ -102,7 +152,8 @@ HIDDEN void readFromTerminal(state_t *procState, int asid)
                 }
             }
         }
-        SYSCALL(VERHOGEN, 0, 0, 0); /*anche qui serve il semaforo fra*/
+        receiverSem->asidProcInside = -1;
+        SYSCALL(VERHOGEN, (int)receiverSem->semVal, 0, 0);
     }
     else
     {
@@ -133,7 +184,7 @@ void supportSyscallDispatcher(support_t *sup_struct)
         writeToPrinter(procState, asid);
         break;
     case WRITETERMINAL:
-        /* code */
+        writeToTerminal(procState, asid);
         break;
     case READTERMINAL:
         readFromTerminal(procState, asid);

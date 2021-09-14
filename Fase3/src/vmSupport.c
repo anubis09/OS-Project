@@ -12,11 +12,15 @@ void freeME(int asid)
     {
         SYSCALL(VERHOGEN, (int)&swptSemaphore.semVal, 0, 0);
     }
-    for (int i = 0; i < SUPDEVSEMNUM; i++)
+    else
     {
-        if (supportDeviceSemaphores[i].asidProcInside == asid)
+        for (int i = 0; i < SUPDEVSEMNUM; i++)
         {
-            SYSCALL(VERHOGEN, (int)&(supportDeviceSemaphores[i].semVal), 0, 0);
+            if (supportDeviceSemaphores[i].asidProcInside == asid)
+            {
+                SYSCALL(VERHOGEN, (int)&(supportDeviceSemaphores[i].semVal), 0, 0);
+                break;
+            }
         }
     }
 }
@@ -33,7 +37,6 @@ void initSwapStructs()
     for (int i = 0; i < POOLSIZE; i++)
     {
         swapPool_table[i].sw_asid = -1;
-        /*ESSENDO IL VPN, NON DEVO SETTARE DEI BIT STRANI.*/
         swapPool_table[i].sw_pageNo = 0;
         swapPool_table[i].sw_pte = NULL;
     }
@@ -65,21 +68,24 @@ void atomicOFF()
 /*
     La read legge il blocco collocato in blocknumber e lo copia al physicalAddr
     La write legge il blocco collocato in physicalAddr e lo copia al blocknumber
+    non so se il phisical address debba essere completo oppure no, ma io penso di si.
 */
-HIDDEN void flashOperation(int asid, unsigned int flashAddr, int physicalAddr, int command)
+HIDDEN void flashOperation(int asid, unsigned int page, memaddr physicalAddr, int command)
 {
-    SYSCALL(PASSEREN, (int)&(supportDeviceSemaphores[FLASH].semVal), 0, 0);
-    supportDeviceSemaphores[FLASH].asidProcInside = asid;
+    /*cambiare come prendiamo il semaforo, ma quello lo famo successivamente*/
+    mutualExclusion_Semaphore *flashSem = getSupDevSem(FLASH, asid, FALSE);
+    SYSCALL(PASSEREN, (int)flashSem->semVal, 0, 0);
+    flashSem->asidProcInside = asid;
     /*individuo il corretto flash device.*/
-    unsigned int *devRegAddr = (unsigned int *)(DEVREGBASE + (0x80 + (asid - 1) * 0x10));
+    memaddr *devRegAddr = (memaddr *)(DEVREGBASE + (0x80 + (asid - 1) * 0x10));
     *(devRegAddr + 2) = physicalAddr;
     atomicON();
-    *(devRegAddr + 1) = flashAddr | command;
+    *(devRegAddr + 1) = (page << 8) | command;
     int statusCode = SYSCALL(IOWAIT, FLASHINT, asid - 1, 0);
     atomicOFF();
     supportDeviceSemaphores[FLASH].asidProcInside = -1;
-    SYSCALL(VERHOGEN, (int)&(supportDeviceSemaphores[FLASH].semVal), 0, 0);
-    if (statusCode >= 2 || statusCode == 0)
+    SYSCALL(VERHOGEN, (int)flashSem->semVal, 0, 0);
+    if (statusCode != READY)
     {
         programTrap(asid);
     }
@@ -99,12 +105,14 @@ void pageFaultHandler()
         SYSCALL(PASSEREN, (int)&swptSemaphore, 0, 0);
         swptSemaphore.asidProcInside = asid;
         unsigned int entry_hi = sup_struct->sup_exceptState[PGFAULTEXCEPT].entry_hi;
-        unsigned int p = (entry_hi & GETPAGENO);
-        /*visto che p non è in memoria prendiamo un frame a caso dalla mem fisica*/
-        int pointer = getPointer();
-        swap_t *entry = &(swapPool_table[pointer]);
+        unsigned int page = ((entry_hi & GETPAGENO) >> VPNSHIFT) & 0xFF;
+        if (page > 30)
+            page = 31;
+        /*visto che page non è in memoria prendiamo un frame a caso dalla mem fisica*/
+        int offSet = getPointer();
+        swap_t *entry = &(swapPool_table[offSet]);
         /*we find the PFN*/
-        unsigned int lo = SWAPSTART + pointer * PAGESIZE;
+        unsigned int lo = SWAPSTART + offSet * PAGESIZE;
         if (entry->sw_asid != -1)
         {
             /*
@@ -123,19 +131,17 @@ void pageFaultHandler()
             atomicOFF();
             /*UPDATE BACKING STORE 8.C gli vado a salvare quello che ci aveva messo
             dentro che poi lo sovrascrivo.*/
-            flashOperation(asid, p, lo, FLASHWRITE);
+            flashOperation(asid, page, lo, FLASHWRITE);
         }
         /*9 read the content of page p from CurrP backing store into the frame i.*/
-        flashOperation(asid, p, lo, FLASHREAD);
+        flashOperation(asid, page, lo, FLASHREAD);
         entry->sw_asid = asid;
-        entry->sw_pageNo = p;
-        /*we are now getting the index of the user page table array.*/
-        unsigned int index = (p >> VPNSHIFT) & 0xFF;
-        entry->sw_pte = &sup_struct->sup_privatePgTbl[index];
-        atomicON();
+        entry->sw_pageNo = entry_hi & GETPAGENO;
+        entry->sw_pte = &sup_struct->sup_privatePgTbl[page];
         /*setting valid, global and dirty bits on.*/
         lo |= VALIDON | GLOBALON | DIRTYON;
-        sup_struct->sup_privatePgTbl[index].pte_entryLO = lo;
+        atomicON();
+        sup_struct->sup_privatePgTbl[page].pte_entryLO = lo;
         /*UPDATING TLB*/
         TLBCLR();
         atomicOFF();

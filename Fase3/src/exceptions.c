@@ -70,7 +70,7 @@ HIDDEN void retControl(state_t *proc_state, int isBlocking)
 HIDDEN void create_process(state_t *proc_state)
 {
     pcb_PTR newProcess = allocPcb();
-    int ret_val = 0;
+    int ret_val = OK;
     if (newProcess == NULL)
     {
         /*No more free pcb to allocate*/
@@ -368,13 +368,14 @@ void TLB_Handler()
 
 void uTLB_RefillHandler()
 {
-
     state_t *proc_state = (state_t *)BIOSDATAPAGE;
     unsigned int entry_hi = proc_state->entry_hi;
     /*here i am getting the VPN, then i am only taking the last 2 hexa digits
     because they defines the offseet in the pagetable entry.*/
 
     int pT_Entry = ((entry_hi & GETPAGENO) >> VPNSHIFT) & 0xFF;
+    if (pT_Entry > 30) /*check se è lo stack.*/
+        pT_Entry = 31;
     unsigned int entry_lo;
     entry_lo = currentProcess->p_supportStruct->sup_privatePgTbl[pT_Entry].pte_entryLO;
     setENTRYHI(entry_hi);

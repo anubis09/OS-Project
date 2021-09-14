@@ -118,6 +118,7 @@
 #define OKCHARRECV 5
 #define TRANSMITCHAR 2
 #define RECEIVECHAR 2
+#define PRINTCHAR 2
 
 #define SEEKTOCYL 2
 #define DISKREAD 3
