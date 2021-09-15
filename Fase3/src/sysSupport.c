@@ -16,8 +16,12 @@ HIDDEN int isKuseg(unsigned int addr)
         return FALSE;
 }
 
-HIDDEN void terminate()
+HIDDEN void terminate(int *semaphore)
 {
+    if (semaphore != NULL)
+    {
+        SYSCALL(VERHOGEN, (int)semaphore, 0, 0);
+    }
     SYSCALL(VERHOGEN, (int)&masterSemaphore, 0, 0);
     SYSCALL(TERMPROCESS, 0, 0, 0);
 }
@@ -37,9 +41,8 @@ HIDDEN void writeToPrinter(state_t *procState, int asid)
     {
         devregtr *printerReg = getDeviceRegAddr(PRNTINT, asid - 1);
         int status, nchar = 0;
-        mutualExclusion_Semaphore *printerSem = getSupDevSem(PRINTER, asid, FALSE);
-        printerSem->asidProcInside = asid;
-        SYSCALL(PASSEREN, (int)&(printerSem->semVal), 0, 0);
+        int *printerSem = getSupDevSem(PRINTER, asid, FALSE);
+        SYSCALL(PASSEREN, (int)&printerSem, 0, 0);
         while (*text != EOS)
         {
             *(printerReg + 2) = (unsigned int)*text;
@@ -60,12 +63,11 @@ HIDDEN void writeToPrinter(state_t *procState, int asid)
         {
             procState->reg_v0 = nchar;
         }
-        printerSem->asidProcInside = -1;
-        SYSCALL(VERHOGEN, (int)&(printerSem->semVal), 0, 0);
+        SYSCALL(VERHOGEN, (int)&printerSem, 0, 0);
     }
     else
     {
-        terminate(asid);
+        terminate(NULL);
     }
 }
 
@@ -79,9 +81,8 @@ HIDDEN void writeToTerminal(state_t *procState, int asid)
         devregtr *termReg = getDeviceRegAddr(TERMINT, asid - 1);
         int status, nChar = 0;
 
-        mutualExclusion_Semaphore *transmitterSem = getSupDevSem(TERMINAL, asid, FALSE);
-        transmitterSem->asidProcInside = asid;
-        SYSCALL(PASSEREN, (int)&(transmitterSem->semVal), 0, 0);
+        int *transmitterSem = getSupDevSem(TERMINAL, asid, FALSE);
+        SYSCALL(PASSEREN, (int)&transmitterSem, 0, 0);
 
         while (*text != EOS)
         {
@@ -105,12 +106,11 @@ HIDDEN void writeToTerminal(state_t *procState, int asid)
         {
             procState->reg_v0 = nChar;
         }
-        transmitterSem->asidProcInside = -1;
-        SYSCALL(VERHOGEN, (int)&(transmitterSem->semVal), 0, 0);
+        SYSCALL(VERHOGEN, (int)&transmitterSem, 0, 0);
     }
     else
     {
-        terminate(asid);
+        terminate(NULL);
     }
 }
 
@@ -122,9 +122,8 @@ HIDDEN void readFromTerminal(state_t *procState, int asid)
         devregtr *base = getDeviceRegAddr(TERMINT, asid - 1);
         unsigned int status;
         int nChar = 0, isNotOver = TRUE;
-        mutualExclusion_Semaphore *receiverSem = getSupDevSem(TERMINAL, asid, TRUE);
-        SYSCALL(PASSEREN, (int)&(receiverSem->semVal), 0, 0);
-        receiverSem->asidProcInside = asid;
+        int *receiverSem = getSupDevSem(TERMINAL, asid, TRUE);
+        SYSCALL(PASSEREN, (int)&receiverSem, 0, 0);
         while (isNotOver)
         {
             atomicON();
@@ -139,32 +138,27 @@ HIDDEN void readFromTerminal(state_t *procState, int asid)
             else
             {
                 unsigned int c = (status & TERMCHARRECVMASK) >> BYTELENGTH;
+                *string = c;
+                string++;
+                nChar++;
                 if (c == '\n')
                 {
                     isNotOver = FALSE;
                     procState->reg_v0 = nChar;
                 }
-                else
-                {
-                    *string = c;
-                    string++;
-                    nChar++;
-                }
             }
         }
-        receiverSem->asidProcInside = -1;
-        SYSCALL(VERHOGEN, (int)&(receiverSem->semVal), 0, 0);
+        SYSCALL(VERHOGEN, (int)&receiverSem, 0, 0);
     }
     else
     {
-        terminate();
+        terminate(NULL);
     }
 }
 
-void programTrap(int asid)
+void programTrap(int *sem)
 {
-    freeME(asid);
-    terminate();
+    terminate(sem);
 }
 
 void supportSyscallDispatcher(support_t *sup_struct)
@@ -175,7 +169,7 @@ void supportSyscallDispatcher(support_t *sup_struct)
     switch (sysType)
     {
     case TERMINATE:
-        terminate();
+        terminate(NULL);
         break;
     case GET_TOD:
         getTod(procState);
@@ -191,7 +185,7 @@ void supportSyscallDispatcher(support_t *sup_struct)
         break;
     default:
         /*syscode > 13*/
-        programTrap(asid);
+        programTrap(NULL);
         break;
     }
     procState->pc_epc += WORDLEN;
@@ -208,7 +202,7 @@ void generalExceptionHandler()
         supportSyscallDispatcher(sup_struct);
         break;
     default:
-        programTrap(sup_struct->sup_asid);
+        programTrap(NULL);
         break;
     }
 }

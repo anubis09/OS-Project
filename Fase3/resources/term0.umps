@@ -2,7 +2,8 @@ Strcat Test starts
 Enter a string: ciao
 
 Enter another string: ciao
-ciaciao
+ciaociao
+
 
 Strcat concluded
 System halted 

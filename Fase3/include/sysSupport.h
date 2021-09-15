@@ -7,7 +7,7 @@
 
 void supportSyscallDispatcher(support_t *sup_struct);
 
-void programTrap(int asid);
+void programTrap(int *sem);
 
 void generalExceptionHandler();
 

@@ -6,7 +6,6 @@
 #include "initProc.h"
 
 void initSwapStructs();
-void freeME(int asid);
 void atomicON();
 void atomicOFF();
 void pageFaultHandler();

@@ -3,27 +3,7 @@
 #define SWAPSTART 0x20020000
 
 HIDDEN swap_t swapPool_table[POOLSIZE];
-HIDDEN mutualExclusion_Semaphore swptSemaphore;
-
-/*questa ci sta che sia qui*/
-void freeME(int asid)
-{
-    if (swptSemaphore.asidProcInside == asid)
-    {
-        SYSCALL(VERHOGEN, (int)&(swptSemaphore.semVal), 0, 0);
-    }
-    else
-    {
-        for (int i = 0; i < SUPDEVSEMNUM; i++)
-        {
-            if (supportDeviceSemaphores[i].asidProcInside == asid)
-            {
-                SYSCALL(VERHOGEN, (int)&(supportDeviceSemaphores[i].semVal), 0, 0);
-                break;
-            }
-        }
-    }
-}
+HIDDEN int swptSemaphore;
 
 /*PAG 70 pops, COSA IMPORTANTE PER CAPIRE QUESTO CAPITOLO.*/
 
@@ -40,8 +20,7 @@ void initSwapStructs()
         swapPool_table[i].sw_pageNo = 0;
         swapPool_table[i].sw_pte = NULL;
     }
-    swptSemaphore.semVal = 1;
-    swptSemaphore.asidProcInside = -1;
+    swptSemaphore = 1;
 }
 
 HIDDEN int getPointer()
@@ -73,9 +52,8 @@ void atomicOFF()
 HIDDEN void flashOperation(int asid, unsigned int page, memaddr physicalAddr, int command)
 {
     /*cambiare come prendiamo il semaforo, ma quello lo famo successivamente*/
-    mutualExclusion_Semaphore *flashSem = getSupDevSem(FLASH, asid, FALSE);
-    SYSCALL(PASSEREN, (int)&(flashSem->semVal), 0, 0);
-    flashSem->asidProcInside = asid;
+    int *flashSem = getSupDevSem(FLASH, asid, FALSE);
+    SYSCALL(PASSEREN, (int)&flashSem, 0, 0);
     /*individuo il corretto flash device.*/
     memaddr *devRegAddr = (memaddr *)(DEVREGBASE + (0x80 + (asid - 1) * 0x10));
     *(devRegAddr + 2) = physicalAddr;
@@ -83,11 +61,10 @@ HIDDEN void flashOperation(int asid, unsigned int page, memaddr physicalAddr, in
     *(devRegAddr + 1) = (page << 8) | command;
     int statusCode = SYSCALL(IOWAIT, FLASHINT, asid - 1, FALSE);
     atomicOFF();
-    supportDeviceSemaphores[FLASH].asidProcInside = -1;
-    SYSCALL(VERHOGEN, (int)&(flashSem->semVal), 0, 0);
+    SYSCALL(VERHOGEN, (int)&flashSem, 0, 0);
     if (statusCode != READY)
     {
-        programTrap(asid);
+        programTrap(&swptSemaphore);
     }
 }
 
@@ -98,12 +75,11 @@ void pageFaultHandler()
     unsigned int cause = (sup_struct->sup_exceptState[PGFAULTEXCEPT].cause & GETEXECCODE) >> CAUSESHIFT;
     if (cause == MODIFICATIONEXCEPTION)
     {
-        programTrap(asid);
+        programTrap(NULL); //giuto con NULL
     }
     else
     {
-        SYSCALL(PASSEREN, (int)&(swptSemaphore.semVal), 0, 0);
-        swptSemaphore.asidProcInside = asid;
+        SYSCALL(PASSEREN, (int)&swptSemaphore, 0, 0);
         unsigned int entry_hi = sup_struct->sup_exceptState[PGFAULTEXCEPT].entry_hi;
         unsigned int page = ((entry_hi & GETPAGENO) >> VPNSHIFT) & 0xFF;
         if (page > 30)
@@ -139,14 +115,13 @@ void pageFaultHandler()
         entry->sw_pageNo = entry_hi & GETPAGENO;
         entry->sw_pte = &sup_struct->sup_privatePgTbl[page];
         /*setting valid, global and dirty bits on.*/
-        lo |= VALIDON | GLOBALON | DIRTYON;
+        lo |= VALIDON | DIRTYON;
         atomicON();
         sup_struct->sup_privatePgTbl[page].pte_entryLO = lo;
         /*UPDATING TLB*/
         TLBCLR();
         atomicOFF();
-        swptSemaphore.asidProcInside = -1;
-        SYSCALL(VERHOGEN, (int)&(swptSemaphore.semVal), 0, 0);
+        SYSCALL(VERHOGEN, (int)&swptSemaphore, 0, 0);
         LDST(&(sup_struct->sup_exceptState[PGFAULTEXCEPT]));
     }
 }

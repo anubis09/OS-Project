@@ -15,10 +15,10 @@
     16-23 TERM TRANSMITTER
     24-31 TERM RECEIVER
 */
-mutualExclusion_Semaphore supportDeviceSemaphores[32];
+int supportDeviceSemaphores[32];
 int masterSemaphore;
 
 void istantiatorProcess();
-mutualExclusion_Semaphore *getSupDevSem(int devType, int devNum, int isReceiver);
+int *getSupDevSem(int devType, int devNum, int isReceiver);
 
 #endif
