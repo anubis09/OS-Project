@@ -60,11 +60,11 @@ void istantiatorProcess()
     initSwapStructs();
     masterSemaphore = 0;
 
-    for (int asid = 1; asid <= UPROCMAX; asid++)
+    for (int asid = 1; asid <= 2; asid++)
     {
         initProc(asid);
     }
-    for (int i = 1; i <= UPROCMAX; i++)
+    for (int i = 1; i <= 2; i++)
     {
         SYSCALL(PASSEREN, (int)&masterSemaphore, 0, 0);
     }

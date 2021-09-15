@@ -1,1 +1,8 @@
-StrcSystem halted 
+Strcat Test starts
+Enter a string: ciao
+
+Enter another string: ciao
+ciaciao
+
+Strcat concluded
+System halted 

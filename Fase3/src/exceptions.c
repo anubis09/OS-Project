@@ -17,7 +17,7 @@ void exceptionsHandler()
         TLB_Handler();
         break;
     case 8:
-        /*Syscall exception, so call Nucleus’s SYSCALLexception handler*/
+        /*Syscall exception, so call Nucleus’s SYSCALL exception handler*/
         syscallDispatcher();
         break;
     default:
@@ -349,8 +349,9 @@ void syscallDispatcher()
     else
     {
         /*Process was in user mode, TRAP exception(Reserved Instruction)*/
-        setCAUSE(PRIVINSTR << CAUSESHIFT);
-        exceptionsHandler();
+        setCAUSE(getCAUSE() + (2 << CAUSESHIFT));
+        // exceptionsHandler();
+        programTrapHandler();
     }
 }
 

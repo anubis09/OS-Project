@@ -1,16 +1,18 @@
 #include "../include/exceptions.h"
 
-void exceptionsHandler(){
+void exceptionsHandler()
+{
     /*For understanding which type of exception happened, need to get the execCode of the cause register.*/
     unsigned int causeCode = getCAUSE() & GETEXECCODE;
     /*Right-shifting because execCode are bits 2-6, and we want them in bits 0-4 */
     causeCode >>= CAUSESHIFT;
-    switch (causeCode){
+    switch (causeCode)
+    {
     case 0:
         /* Interrupt exception, so call Nucleus’s device interrupt handler*/
         interruptHandler();
         break;
-    case 1 ... 3 :
+    case 1 ... 3:
         /*TLB exception, so call Nucleus’s TLB exception handler*/
         TLB_Handler();
         break;
@@ -28,9 +30,10 @@ void exceptionsHandler(){
 /*
     Returns the time passed since the process status was loaded, to now.
 */
-HIDDEN cpu_t updateTime(){
-    unsigned int thisTime = getTIMER() / (*((cpu_t *) TIMESCALEADDR));
-    return (TIMESLICE - thisTime); 
+HIDDEN cpu_t updateTime()
+{
+    unsigned int thisTime = getTIMER() / (*((cpu_t *)TIMESCALEADDR));
+    return (TIMESLICE - thisTime);
 }
 
 /*
@@ -38,19 +41,22 @@ HIDDEN cpu_t updateTime(){
     If the syscall is a non-blocking syscall ,returns control to the caller.
     If the syscall is a blocking syscall, leaves control to the scheduler.
 */
-HIDDEN void retControl(state_t *proc_state, int isBlocking){
+HIDDEN void retControl(state_t *proc_state, int isBlocking)
+{
     /*We need to update pc, otherwise we will enter an infinite syscall loop*/
     proc_state->pc_epc += WORDLEN;
-    if(!isBlocking){
+    if (!isBlocking)
+    {
         /*Non-blocking syscall*/
         LDST(proc_state);
     }
-    else{
+    else
+    {
         /*Blocking syscall, updates the current process processor_status, and the processor time used.*/
         assignStateT(&currentProcess->p_s, proc_state);
         currentProcess->p_time += updateTime();
         scheduler();
-    }   
+    }
 }
 
 /*
@@ -61,18 +67,22 @@ HIDDEN void retControl(state_t *proc_state, int isBlocking){
     If the new process cannot be created due to lack of resources, an error code of -1 is placed/returned 
     in the caller’sv0, otherwise, returnthe value 0 in the caller’sv0.
 */
-HIDDEN void create_process(state_t *proc_state){
-    pcb_PTR newProcess = allocPcb(); 
+HIDDEN void create_process(state_t *proc_state)
+{
+    pcb_PTR newProcess = allocPcb();
     int ret_val = 0;
-    if(newProcess == NULL){
+    if (newProcess == NULL)
+    {
         /*No more free pcb to allocate*/
         ret_val = -1;
     }
-    else{
+    else
+    {
         /*When SYS1 is called, the second and third input should be a state_t* and a support_t*
         that are needed for the initialization of the pcb.*/
         state_t *statep = (state_t *)proc_state->reg_a1;
-        if(statep != NULL){
+        if (statep != NULL)
+        {
             support_t *supportp = (support_t *)proc_state->reg_a2;
             assignStateT(&newProcess->p_s, statep);
             newProcess->p_supportStruct = supportp;
@@ -83,7 +93,8 @@ HIDDEN void create_process(state_t *proc_state){
             /*There is a new process started*/
             processCount++;
         }
-        else{
+        else
+        {
             /*State p is null and we do not allocate a new pcb*/
             freePcb(newProcess);
             ret_val = -1;
@@ -96,24 +107,30 @@ HIDDEN void create_process(state_t *proc_state){
 /*
     Terminate the whole subtree (process and siblings included) of the process passed as input
 */
-HIDDEN void terminate_SubTree(pcb_PTR process){
-    if(process->p_child != NULL){
-        terminate_SubTree(process->p_child);            
+HIDDEN void terminate_SubTree(pcb_PTR process)
+{
+    if (process->p_child != NULL)
+    {
+        terminate_SubTree(process->p_child);
     }
-    if(process->p_next_sib != NULL){
+    if (process->p_next_sib != NULL)
+    {
         terminate_SubTree(process->p_next_sib);
     }
     /*Remove the process from the ready queue, if isn't in there, outprocQ returns NULL*/
-    outProcQ(&readyQueue,process);
+    outProcQ(&readyQueue, process);
     outChild(process);
-    if(process->p_semAdd != NULL && *(process->p_semAdd) < 0){
+    if (process->p_semAdd != NULL && *(process->p_semAdd) < 0)
+    {
         /*A valid semaphore*/
-        if(process->p_semAdd >= &device_Semaphore[0] &&
-         process->p_semAdd <= &device_Semaphore[PSEUDOCLOCKSEM]){
+        if (process->p_semAdd >= &device_Semaphore[0] &&
+            process->p_semAdd <= &device_Semaphore[PSEUDOCLOCKSEM])
+        {
             /*Device semaphore*/
             softBlockCount--;
         }
-        else{
+        else
+        {
             /*Non device semaphore*/
             (*process->p_semAdd)++;
         }
@@ -130,9 +147,29 @@ HIDDEN void terminate_SubTree(pcb_PTR process){
     This services causes the executing process to cease to exist.
     In addition, recursively, all progeny of this process are terminated as well. 
 */
-HIDDEN void terminate_process(pcb_PTR process){    
+HIDDEN void terminate_process(pcb_PTR process)
+{
     outChild(process);
-    if(!emptyChild(process)){
+    if (process->p_semAdd != NULL && *(process->p_semAdd) < 0)
+    {
+        /*A valid semaphore*/
+        if (process->p_semAdd >= &device_Semaphore[0] &&
+            process->p_semAdd <= &device_Semaphore[PSEUDOCLOCKSEM])
+        {
+            /*Device semaphore*/
+            softBlockCount--;
+        }
+        else
+        {
+            /*Non device semaphore*/
+            (*process->p_semAdd)++;
+        }
+        /*Remove the process from the semaphore queue*/
+        outBlocked(process);
+        process->p_semAdd = NULL;
+    }
+    if (!emptyChild(process))
+    {
         terminate_SubTree(process->p_child);
     }
     processCount--;
@@ -148,42 +185,49 @@ HIDDEN void terminate_process(pcb_PTR process){
     Current Process, or this process is blocked on the ASL (transitions from “running”
     to “blocked”) and the Scheduler is called.  
 */
-HIDDEN void Passeren(state_t *proc_state){
+HIDDEN void Passeren(state_t *proc_state)
+{
     int *semaddr = (int *)proc_state->reg_a1;
-	int block = FALSE;
-    if(semaddr != NULL){
+    int block = FALSE;
+    if (semaddr != NULL)
+    {
         (*semaddr)--;
-        if((*semaddr) < 0){
+        if ((*semaddr) < 0)
+        {
             int semNotAllocated = insertBlocked(semaddr, currentProcess);
-            if(semNotAllocated){
+            if (semNotAllocated)
+            {
                 /*No more free semaphore to allocate.*/
                 PANIC();
             }
-            else{
+            else
+            {
                 block = TRUE;
             }
-
         }
     }
-    retControl(proc_state,block);
+    retControl(proc_state, block);
 }
 
 /*
     Verhogen (V) (SYS4)
     This service requests the Nucleus to perform a V operation on a semaphore.
 */
-void Verhogen(state_t *proc_state){
+void Verhogen(state_t *proc_state)
+{
     int *semaddr = (int *)proc_state->reg_a1;
-    if(semaddr != NULL){
+    if (semaddr != NULL)
+    {
         (*semaddr)++;
         pcb_PTR fp = removeBlocked(semaddr);
 
-        if(fp != NULL){
+        if (fp != NULL)
+        {
             fp->p_semAdd = NULL;
             insertProcQ(&readyQueue, fp);
         }
     }
-    retControl(proc_state,FALSE); 
+    retControl(proc_state, FALSE);
 }
 
 /*
@@ -191,21 +235,24 @@ void Verhogen(state_t *proc_state){
     This service performs a P operation on the semaphore that the Nucleus maintains
     for the I/O device indicated by the values in a1,a2, and optionally a3.
 */
-HIDDEN void wait_IOdevice(state_t *proc_state){
+HIDDEN void wait_IOdevice(state_t *proc_state)
+{
     int interruptLine = proc_state->reg_a1;
     int nSubDevice = proc_state->reg_a2;
     int waitForTermRead = proc_state->reg_a3;
     int *deviceSem = NULL;
-    if(interruptLine >= 3 && interruptLine <= 7 && nSubDevice >=0 && nSubDevice <=7){
+    if (interruptLine >= 3 && interruptLine <= 7 && nSubDevice >= 0 && nSubDevice <= 7)
+    {
         /*Syscall with the right format*/
         deviceSem = devSem_Access(interruptLine, nSubDevice, waitForTermRead);
         softBlockCount++;
         proc_state->reg_a1 = (int)deviceSem;
         Passeren(proc_state);
     }
-    else{
+    else
+    {
         /*Syscall with a wrong format*/
-        retControl(proc_state,FALSE);
+        retControl(proc_state, FALSE);
     }
 }
 
@@ -214,7 +261,8 @@ HIDDEN void wait_IOdevice(state_t *proc_state){
     This service requests that the accumulated processor time (in microseconds)
     used by the requesting process be placed/returned in the caller’sv0
 */
-HIDDEN void Get_Cpu_Time(state_t *proc_state){
+HIDDEN void Get_Cpu_Time(state_t *proc_state)
+{
     proc_state->reg_v0 = currentProcess->p_time + updateTime();
     retControl(proc_state, FALSE);
 }
@@ -224,7 +272,8 @@ Wait For Clock (SYS7)
 This service performs a P operation on the Nucleus maintained Pseudo-clock
 semaphore. This semaphore is V’ed every 100 milliseconds by the Nucleus.
 */
-HIDDEN void Wait_For_Clock(state_t *proc_state){
+HIDDEN void Wait_For_Clock(state_t *proc_state)
+{
     softBlockCount++;
     proc_state->reg_a1 = (int)&device_Semaphore[PSEUDOCLOCKSEM];
     /*We uploaded reg a1 with device semaphore addres, now we are ready to use PASSEREN*/
@@ -235,11 +284,11 @@ HIDDEN void Wait_For_Clock(state_t *proc_state){
     GetSUPPORTData (SYS8)
     return the value of p_supportStruct from the current process
 */
-HIDDEN void get_support_data(state_t *proc_state){
+HIDDEN void get_support_data(state_t *proc_state)
+{
     proc_state->reg_v0 = (int)currentProcess->p_supportStruct;
-    retControl(proc_state,FALSE);
+    retControl(proc_state, FALSE);
 }
-
 
 /*
     For SYSCALL exceptions numbered 9 and above, Program Trap and TLB exceptions,
@@ -248,26 +297,31 @@ HIDDEN void get_support_data(state_t *proc_state){
     1) If the current process's support structureis NULL, then the exception should be handled as a SYS2.
     2) If the Current Process’spsupportStructis non-NULL. The handlingof the exception is “passed up.”
 */
-HIDDEN void passUp_Die(int except){
-    if(currentProcess->p_supportStruct == NULL){
+HIDDEN void passUp_Die(int except)
+{
+    if (currentProcess->p_supportStruct == NULL)
+    {
         /*Die portion*/
         terminate_process(currentProcess);
     }
-    else{
+    else
+    {
         /*Pass up portion*/
         state_t *proc_state = (state_t *)BIOSDATAPAGE;
         assignStateT(&(currentProcess->p_supportStruct->sup_exceptState[except]), proc_state);
-        unsigned int stackPtr,status,pc;
+        unsigned int stackPtr, status, pc;
         stackPtr = currentProcess->p_supportStruct->sup_exceptContext[except].c_stackPtr;
         status = currentProcess->p_supportStruct->sup_exceptContext[except].c_status;
         pc = currentProcess->p_supportStruct->sup_exceptContext[except].c_pc;
-        LDCXT(stackPtr,status,pc);
+        LDCXT(stackPtr, status, pc);
     }
 }
 
-void syscallDispatcher(){
+void syscallDispatcher()
+{
     state_t *proc_state = (state_t *)BIOSDATAPAGE;
-    if(isKernelModeP(proc_state->status)){
+    if (isKernelModeP(proc_state->status))
+    {
         /*Process was in kernel mode*/
         int sysType = proc_state->reg_a0;
         switch (sysType)
@@ -310,28 +364,30 @@ void syscallDispatcher(){
             break;
         }
     }
-    else{
+    else
+    {
         /*Process was in user mode, TRAP exception(Reserved Instruction)*/
-        setCAUSE(PRIVINSTR<<CAUSESHIFT);
+        setCAUSE(PRIVINSTR << CAUSESHIFT);
         exceptionsHandler();
     }
 }
 
-void programTrapHandler(){
+void programTrapHandler()
+{
     /*The Nucleus Program Trap exception handler should perform a standard PassUp or Die operation using theGENERALEXCEPTindex value.*/
     passUp_Die(GENERALEXCEPT);
 }
 
-
-void TLB_Handler(){
+void TLB_Handler()
+{
     /*The Nucleus TLB exception handler should perform a standard Pass Up orDie operation using thePGFAULTEXCEPTindex value.*/
     passUp_Die(PGFAULTEXCEPT);
 }
 
-
-void uTLB_RefillHandler() {
-	setENTRYHI(0x80000000);
-	setENTRYLO(0x00000000);
-	TLBWR();	
-	LDST ((state_t *) 0x0FFFF000);
+void uTLB_RefillHandler()
+{
+    setENTRYHI(0x80000000);
+    setENTRYLO(0x00000000);
+    TLBWR();
+    LDST((state_t *)0x0FFFF000);
 }
