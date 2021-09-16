@@ -22,7 +22,20 @@ void initSwapStructs()
 HIDDEN int getPointer()
 {
     static int pointer = -1;
-    pointer = (pointer + 1) % POOLSIZE;
+    int found = FALSE;
+    for (int i = 0; i < POOLSIZE; i++)
+    {
+        if (swapPool_table[i].sw_asid == -1)
+        {
+            pointer = i;
+            found = TRUE;
+            break;
+        }
+    }
+    if (!found)
+    {
+        pointer = (pointer + 1) % POOLSIZE;
+    }
     return pointer;
 }
 
@@ -71,7 +84,7 @@ void pageFaultHandler()
     unsigned int cause = (sup_struct->sup_exceptState[PGFAULTEXCEPT].cause & GETEXECCODE) >> CAUSESHIFT;
     if (cause == MODIFICATIONEXCEPTION)
     {
-        programTrap(NULL); //giuto con NULL
+        programTrap(NULL);
     }
     else
     {
@@ -110,7 +123,7 @@ void pageFaultHandler()
         entry->sw_asid = asid;
         entry->sw_pageNo = entry_hi & GETPAGENO;
         entry->sw_pte = &sup_struct->sup_privatePgTbl[page];
-        /*setting valid, global and dirty bits on.*/
+        /*setting valid, and dirty bits on.*/
         lo |= VALIDON | DIRTYON;
         atomicON();
         sup_struct->sup_privatePgTbl[page].pte_entryLO = lo;

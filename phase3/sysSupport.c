@@ -23,6 +23,7 @@ HIDDEN int isKuseg(memaddr addr)
 }
 
 /*
+    Terminate (SYS9)
     The SYS9 service is essentially a user-mode “wrapper” 
     for the kernel-mode restricted SYS2 service. 
 */
@@ -38,6 +39,7 @@ HIDDEN void terminate(int *semaphore)
 }
 
 /*
+    GetTOD (SYS10)
     Returns the number of microseconds passed since the system was last booted/reset
 */
 HIDDEN void getTod(state_t *procState)
@@ -47,6 +49,10 @@ HIDDEN void getTod(state_t *procState)
     procState->reg_v0 = tod;
 }
 
+/*
+    WriteToPrinter (SYS11)
+    Transmit a string of character to the printer deviceassociated with the U-proc.
+*/
 HIDDEN void writeToPrinter(state_t *procState, int asid)
 {
     char *text = (char *)procState->reg_a1;
@@ -81,6 +87,9 @@ HIDDEN void writeToPrinter(state_t *procState, int asid)
     }
     else
     {
+        /*It is an error to write to a printer device from an address outside of 
+        the request-ing U-proc’s logical address space, request a SYS11 with a 
+        length less than 0, ora length greater than 128*/
         terminate(NULL);
     }
 }
