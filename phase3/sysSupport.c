@@ -2,13 +2,19 @@
 #define TERMSTATMASK 0xFF
 #define TERMCHARRECVMASK 0xFF00
 
-/*al posto di devNo bisogna mettere asid - 1 e al posto di intLineNo TERMINT per terminale*/
+/*
+    Given the interrupt line number, and the device number, returns a pointer
+    to the starting address location of the correct device register.
+*/
 HIDDEN devregtr *getDeviceRegAddr(int intLineNo, int devNo)
 {
     return (devregtr *)(DEVREGBASE + (intLineNo - STARTINTLINEDEVICE) * 0x80 + devNo * 0x10);
 }
 
-HIDDEN int isKuseg(unsigned int addr)
+/*
+    Given a memory location, returns TRUE if is inside KUSEG, FALSE otherwise.
+*/
+HIDDEN int isKuseg(memaddr addr)
 {
     if (addr >= KUSEG)
         return TRUE;
@@ -16,16 +22,24 @@ HIDDEN int isKuseg(unsigned int addr)
         return FALSE;
 }
 
+/*
+    The SYS9 service is essentially a user-mode “wrapper” 
+    for the kernel-mode restricted SYS2 service. 
+*/
 HIDDEN void terminate(int *semaphore)
 {
     if (semaphore != NULL)
     {
+        /*release of mutual exclusion on support level semaphores.*/
         SYSCALL(VERHOGEN, (int)semaphore, 0, 0);
     }
     SYSCALL(VERHOGEN, (int)&masterSemaphore, 0, 0);
     SYSCALL(TERMPROCESS, 0, 0, 0);
 }
 
+/*
+    Returns the number of microseconds passed since the system was last booted/reset
+*/
 HIDDEN void getTod(state_t *procState)
 {
     int tod;
@@ -161,7 +175,7 @@ void programTrap(int *sem)
     terminate(sem);
 }
 
-void supportSyscallDispatcher(support_t *sup_struct)
+HIDDEN void supportSyscallDispatcher(support_t *sup_struct)
 {
     state_t *procState = &sup_struct->sup_exceptState[GENERALEXCEPT];
     int asid = sup_struct->sup_asid;
@@ -194,8 +208,10 @@ void supportSyscallDispatcher(support_t *sup_struct)
 
 void generalExceptionHandler()
 {
+    /*gettin the cause of the exception*/
     support_t *sup_struct = (support_t *)SYSCALL(GETSUPPORTPTR, 0, 0, 0);
     unsigned int cause = (sup_struct->sup_exceptState[GENERALEXCEPT].cause & GETEXECCODE) >> CAUSESHIFT;
+    /*passing control to the correct handler.*/
     switch (cause)
     {
     case SYSEXCEPTION:

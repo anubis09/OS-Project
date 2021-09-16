@@ -5,12 +5,8 @@
 HIDDEN swap_t swapPool_table[POOLSIZE];
 HIDDEN int swptSemaphore;
 
-/*PAG 70 pops, COSA IMPORTANTE PER CAPIRE QUESTO CAPITOLO.*/
-
 /*
-ricordiamo che un processo verrà inizializzato con tutte le sue vpn come invalid.
-invalid vuol dire che nessuna di queste sta in RAM.
-quindi all'inizio i frame della swap pool devono essere tutti non assegnati.
+
 */
 void initSwapStructs()
 {
