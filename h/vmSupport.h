@@ -14,6 +14,11 @@
 void initSwapStructs();
 
 /*
+    Given the asid of a process, mark all of his frames as unoccupied.
+*/
+void swapCleanUp(int asid);
+
+/*
     Disables interrupts, so that operations done after this function
     are atomical.
 */

@@ -14,6 +14,17 @@ void initSwapStructs()
     swptSemaphore = 1;
 }
 
+void swapCleanUp(int asid)
+{
+    for (int i = 0; i < POOLSIZE; i++)
+    {
+        if (swapPool_table[i].sw_asid == asid)
+        {
+            swapPool_table[i].sw_asid = -1;
+        }
+    }
+}
+
 HIDDEN int getPointer()
 {
     static int pointer = 0;
