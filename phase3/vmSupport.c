@@ -79,7 +79,10 @@ HIDDEN void flashOperation(int asid, unsigned int page, memaddr physicalAddr, in
     SYSCALL(VERHOGEN, (int)&flashSem, 0, 0);
     if (statusCode != READY)
     {
-        programTrap(&swptSemaphore);
+        /*Firstly release the mutual exclusione on the swap semahore*/
+        SYSCALL(VERHOGEN, (int)&swptSemaphore, 0, 0);
+        /*Then we kill the process.*/
+        programTrap(asid);
     }
 }
 
@@ -90,7 +93,7 @@ void pageFaultHandler()
     unsigned int cause = (sup_struct->sup_exceptState[PGFAULTEXCEPT].cause & GETEXECCODE) >> CAUSESHIFT;
     if (cause == MODIFICATIONEXCEPTION)
     {
-        programTrap(NULL);
+        programTrap(asid);
     }
     else
     {

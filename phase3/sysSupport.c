@@ -27,13 +27,9 @@ HIDDEN int isKuseg(memaddr addr)
     The SYS9 service is essentially a user-mode “wrapper” 
     for the kernel-mode restricted SYS2 service. 
 */
-HIDDEN void terminate(int *semaphore)
+HIDDEN void terminate(int asid)
 {
-    if (semaphore != NULL)
-    {
-        /*release of mutual exclusion on support level semaphores.*/
-        SYSCALL(VERHOGEN, (int)semaphore, 0, 0);
-    }
+    swapCleanUp(asid);
     SYSCALL(VERHOGEN, (int)&masterSemaphore, 0, 0);
     SYSCALL(TERMPROCESS, 0, 0, 0);
 }
@@ -92,7 +88,7 @@ HIDDEN void writeToPrinter(state_t *procState, int asid)
         /*It is an error to write to a printer device from an address outside of 
         the request-ing U-proc’s logical address space, request a SYS11 with a 
         length less than 0, ora length greater than 128*/
-        terminate(NULL);
+        terminate(asid);
     }
 }
 
@@ -144,7 +140,7 @@ HIDDEN void writeToTerminal(state_t *procState, int asid)
         /*It is an error to write to a terminal device from an address outside of 
         the request-ing U-proc’s logical address space, request a SYS11 with a 
         length less than 0, ora length greater than 128*/
-        terminate(NULL);
+        terminate(asid);
     }
 }
 
@@ -194,13 +190,13 @@ HIDDEN void readFromTerminal(state_t *procState, int asid)
     {
         /*Attempting to read from a terminal device to an address outside
          of the request-ing U-proc’s logical address space is an error*/
-        terminate(NULL);
+        terminate(asid);
     }
 }
 
-void programTrap(int *sem)
+void programTrap(int asid)
 {
-    terminate(sem);
+    terminate(asid);
 }
 
 /*
@@ -215,7 +211,7 @@ HIDDEN void supportSyscallDispatcher(support_t *sup_struct)
     switch (sysType)
     {
     case TERMINATE:
-        terminate(NULL);
+        terminate(asid);
         break;
     case GET_TOD:
         getTod(procState);
@@ -231,7 +227,7 @@ HIDDEN void supportSyscallDispatcher(support_t *sup_struct)
         break;
     default:
         /*syscode > 13*/
-        programTrap(NULL);
+        programTrap(asid);
         break;
     }
     procState->pc_epc += WORDLEN;
@@ -250,7 +246,7 @@ void generalExceptionHandler()
         supportSyscallDispatcher(sup_struct);
         break;
     default:
-        programTrap(NULL);
+        programTrap(sup_struct->sup_asid);
         break;
     }
 }

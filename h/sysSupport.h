@@ -21,6 +21,6 @@ void generalExceptionHandler();
     Support Level semaphore, so we takes as input a semaphore pointer to V'ed (NULL if
     the process is not holding a mutual exclusion).
 */
-void programTrap(int *sem);
+void programTrap(int asid);
 
 #endif
