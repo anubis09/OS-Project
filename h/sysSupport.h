@@ -17,9 +17,8 @@ void generalExceptionHandler();
 /*
     The Support Level’s Program Trap exception handler is to terminate the process
     in an orderly fashion; perform the same operations as a SYS9 request.
-    It's an error to kill a process that is actually holding a mutual exclusion on a 
-    Support Level semaphore, so we takes as input a semaphore pointer to V'ed (NULL if
-    the process is not holding a mutual exclusion).
+    Asid is passed so that we can call swapCleanUp, and eliminate extraneous writes to
+    the backing store.
 */
 void programTrap(int asid);
 
