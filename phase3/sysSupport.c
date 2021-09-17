@@ -51,7 +51,9 @@ HIDDEN void getTod(state_t *procState)
 
 /*
     WriteToPrinter (SYS11)
-    Transmit a string of character to the printer deviceassociated with the U-proc.
+    Transmits a string of characters to the printer device associated with the U-proc.
+    Returns the number of characters transmitted, if the write was successful, 
+    otherwise returns the negative of the device's status value.
 */
 HIDDEN void writeToPrinter(state_t *procState, int asid)
 {
@@ -94,6 +96,12 @@ HIDDEN void writeToPrinter(state_t *procState, int asid)
     }
 }
 
+/*
+    WriteToTerminal (SYS12)
+    Transmits a string of characters to the terminal device associated with the U-proc.
+    Returns the number of characters transmitted, if the write was successful, 
+    otherwise returns the negative of the device's status value.
+*/
 HIDDEN void writeToTerminal(state_t *procState, int asid)
 {
     char *text = (char *)procState->reg_a1;
@@ -133,10 +141,19 @@ HIDDEN void writeToTerminal(state_t *procState, int asid)
     }
     else
     {
+        /*It is an error to write to a terminal device from an address outside of 
+        the request-ing U-proc’s logical address space, request a SYS11 with a 
+        length less than 0, ora length greater than 128*/
         terminate(NULL);
     }
 }
 
+/*
+    ReadFromTerminal (SYS13)
+    Receives a string of characters from the terminal device associated with the U-proc.
+    Returns the number of characters received, if the write was successful, 
+    otherwise returns the negative of the device's status value.
+*/
 HIDDEN void readFromTerminal(state_t *procState, int asid)
 {
     char *string = (char *)procState->reg_a1;
@@ -175,6 +192,8 @@ HIDDEN void readFromTerminal(state_t *procState, int asid)
     }
     else
     {
+        /*Attempting to read from a terminal device to an address outside
+         of the request-ing U-proc’s logical address space is an error*/
         terminate(NULL);
     }
 }
@@ -184,6 +203,10 @@ void programTrap(int *sem)
     terminate(sem);
 }
 
+/*
+    supportSyscallDispatcher determines which type of user syscall was request,
+    and passes control to the right handler.
+*/
 HIDDEN void supportSyscallDispatcher(support_t *sup_struct)
 {
     state_t *procState = &sup_struct->sup_exceptState[GENERALEXCEPT];

@@ -172,6 +172,7 @@
 #define UPROCMAX 8
 #define POOLSIZE (UPROCMAX * 2)
 #define STARTINTLINEDEVICE 3
+#define SWAPSTART RAMSTART + (32 * PAGESIZE)
 /* End of Mikeyg constants */
 
 #endif

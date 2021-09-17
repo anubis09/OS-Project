@@ -1,13 +1,8 @@
 #include "../h/vmSupport.h"
 
-#define SWAPSTART 0x20020000
-
 HIDDEN swap_t swapPool_table[POOLSIZE];
 HIDDEN int swptSemaphore;
 
-/*
-
-*/
 void initSwapStructs()
 {
     for (int i = 0; i < POOLSIZE; i++)
@@ -21,13 +16,13 @@ void initSwapStructs()
 
 HIDDEN int getPointer()
 {
-    static int pointer = -1;
+    static int pointer = 0;
     int found = FALSE;
     for (int i = 0; i < POOLSIZE; i++)
     {
-        if (swapPool_table[i].sw_asid == -1)
+        if (swapPool_table[(pointer + i) % POOLSIZE].sw_asid == -1)
         {
-            pointer = i;
+            pointer = (pointer + i) % POOLSIZE;
             found = TRUE;
             break;
         }
