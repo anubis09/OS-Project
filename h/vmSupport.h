@@ -7,6 +7,8 @@
 #include "sysSupport.h"
 #include "initProc.h"
 
+memaddr swapStart;
+
 /*
     Initializes all the support level data structures, such as the swap pool
     table, and the swap pool semaphore.
@@ -33,4 +35,6 @@ void atomicOFF();
     Handles page fault exceptions, passed up by the nucleus.
 */
 void pageFaultHandler();
+
+void flashOperation(int asid, unsigned int page, memaddr pfn, int command);
 #endif

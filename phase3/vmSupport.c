@@ -2,7 +2,6 @@
 
 HIDDEN swap_t swapPool_table[POOLSIZE];
 HIDDEN int swptSemaphore;
-memaddr swapStart;
 
 void initSwapStructs()
 {
@@ -98,7 +97,7 @@ HIDDEN void updateTLB(memaddr entry, memaddr lo)
     Pfn is the starting physical address of the 4k block.
     Command is for the proper operation to perform ( READ WRITE)
 */
-HIDDEN void flashOperation(int asid, unsigned int page, memaddr pfn, int command)
+void flashOperation(int asid, unsigned int page, memaddr pfn, int command)
 {
     int *flashSem = getSupDevSem(FLASH, asid, FALSE);
     SYSCALL(PASSEREN, (int)&flashSem, 0, 0);

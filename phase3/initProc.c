@@ -51,11 +51,26 @@ HIDDEN void initProc(int asid)
     supStructVector[asid - 1].sup_exceptContext[GENERALEXCEPT].c_stackPtr = (memaddr)exceptStack;
     supStructVector[asid - 1].sup_exceptContext[GENERALEXCEPT].c_status = IMON | IEPON | TEBITON;
 
+    /*reading the U-procs header informations in the first block outside the swap pool*/
+    memaddr info = swapStart + POOLSIZE * PAGESIZE;
+    flashOperation(asid, 0, info, FLASHREAD);
+    memaddr *textStart = (memaddr *)(info + 0x0008);
+    memaddr *textSize = (memaddr *)(info + 0x0014);
+
     /*setting up the page table entry, all pages must be dirty, private and invalid*/
     for (int i = 0; i < MAXPAGES - 1; i++)
     {
-        supStructVector[asid - 1].sup_privatePgTbl[i].pte_entryHI = 0x80000000 + (i * PAGESIZE) + (asid << ASIDSHIFT);
-        supStructVector[asid - 1].sup_privatePgTbl[i].pte_entryLO = DIRTYON;
+        unsigned int vpn = 0x80000000 + (i * PAGESIZE);
+        supStructVector[asid - 1].sup_privatePgTbl[i].pte_entryHI = vpn + (asid << ASIDSHIFT);
+        if (vpn >= *textStart && vpn <= *textStart + *textSize)
+        {
+            /*settig all the U-proc's .text pages ad read only */
+            supStructVector[asid - 1].sup_privatePgTbl[i].pte_entryLO = 0;
+        }
+        else
+        {
+            supStructVector[asid - 1].sup_privatePgTbl[i].pte_entryLO = DIRTYON;
+        }
     }
     supStructVector[asid - 1].sup_privatePgTbl[MAXPAGES - 1].pte_entryHI = 0xBFFFF000 + (asid << ASIDSHIFT);
     supStructVector[asid - 1].sup_privatePgTbl[MAXPAGES - 1].pte_entryLO = DIRTYON;
