@@ -155,8 +155,8 @@ void pageFaultHandler()
             entry->sw_pte->pte_entryLO &= VALIDOFF;
             updateTLB(entry->sw_pte->pte_entryHI, entry->sw_pte->pte_entryLO);
             atomicOFF();
-            /*update process x backing store*/
-            flashOperation(entry->sw_asid, GETPAGE(entry->sw_pte->pte_entryHI), entry->sw_pte->pte_entryLO & GETPFN, FLASHWRITE);
+            /*update process x backing store.*/
+            flashOperation(entry->sw_asid, GETPAGE(entry->sw_pte->pte_entryHI), lo, FLASHWRITE);
         }
         /*read the content of page p from current proc backing store into the frame i.*/
         flashOperation(asid, page, lo, FLASHREAD);

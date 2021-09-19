@@ -47,15 +47,15 @@ HIDDEN void writeToPrinter(state_t *procState, int asid)
     /*get syscall's parameters*/
     char *text = (char *)procState->reg_a1;
     int len = (int)procState->reg_a2;
-    if (isKuseg((memaddr)text) == TRUE && len >= 0 && len <= MAXSTRLENG)
+    if (isKuseg((memaddr)text) && len >= 0 && len <= MAXSTRLENG)
     {
         /*get the printer starting address and the printer semaphore*/
         devregtr *printerReg = GETDEVREGADDR(PRNTINT, asid - 1);
         int *printerSem = getSupDevSem(PRINTER, asid, FALSE);
-        int status, nchar = 0;
+        int status, nChar = 0;
         SYSCALL(PASSEREN, (int)&printerSem, 0, 0);
         /*until i have printed the whole string.*/
-        while (*text != EOS)
+        while (*text != EOS && nChar < len)
         {
             /*put character into DATA0 register.*/
             *(printerReg + 2) = *text;
@@ -72,12 +72,12 @@ HIDDEN void writeToPrinter(state_t *procState, int asid)
                 break;
             }
             text++;
-            nchar++;
+            nChar++;
         }
         if (status == 1)
         {
             /*error didn't happen*/
-            procState->reg_v0 = nchar;
+            procState->reg_v0 = nChar;
         }
         SYSCALL(VERHOGEN, (int)&printerSem, 0, 0);
     }
@@ -102,7 +102,7 @@ HIDDEN void writeToTerminal(state_t *procState, int asid)
     char *text = (char *)procState->reg_a1;
     int len = (int)procState->reg_a2;
 
-    if (isKuseg((memaddr)text) == TRUE && len >= 0 && len <= MAXSTRLENG)
+    if (isKuseg((memaddr)text) && len >= 0 && len <= MAXSTRLENG)
     {
         /*get the terminal starting address and the terminal semaphore*/
         devregtr *termReg = GETDEVREGADDR(TERMINT, asid - 1);
@@ -110,7 +110,7 @@ HIDDEN void writeToTerminal(state_t *procState, int asid)
         int status, nChar = 0;
         SYSCALL(PASSEREN, (int)&transmitterSem, 0, 0);
         /*until i have printed the whole string.*/
-        while (*text != EOS)
+        while (*text != EOS && nChar < len)
         {
             atomicON();
             /*put character and command into the TRANSM_COMMAND register*/
@@ -155,13 +155,12 @@ HIDDEN void readFromTerminal(state_t *procState, int asid)
 {
     /*get syscall's parameter */
     char *string = (char *)procState->reg_a1;
-    if (isKuseg((memaddr)string) == TRUE)
+    if (isKuseg((memaddr)string))
     {
         /*get the terminal starting address and the terminal semaphore*/
         devregtr *base = GETDEVREGADDR(TERMINT, asid - 1);
         int *receiverSem = getSupDevSem(TERMINAL, asid, TRUE);
-        unsigned int status;
-        int nChar = 0, isNotOver = TRUE;
+        unsigned int status, nChar = 0, isNotOver = TRUE;
         SYSCALL(PASSEREN, (int)&receiverSem, 0, 0);
         /*until wereceive a newline character or an error status.*/
         while (isNotOver)
