@@ -7,6 +7,9 @@
 #include "sysSupport.h"
 #include "initProc.h"
 
+/*
+    the starting address of the swap pool frames.
+*/
 memaddr swapStart;
 
 /*
@@ -36,5 +39,12 @@ void atomicOFF();
 */
 void pageFaultHandler();
 
+/*
+    This functions is for writing or reading from a flash device.
+    Asid is the asid of the process for getting the right FLASH device.
+    Page is the device block number.
+    Pfn is the starting physical address of the 4k block.
+    Command is for the proper operation to perform ( READ WRITE)
+*/
 void flashOperation(int asid, unsigned int page, memaddr pfn, int command);
 #endif

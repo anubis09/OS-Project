@@ -14,7 +14,7 @@ void initSwapStructs()
     }
     swptSemaphore = 1;
 
-    /*reading .core file to locate the start of the swap pool*/
+    /*reading .core file to locate the starting address of the swap pool*/
     memaddr *textStart = (memaddr *)0x20001008;
     memaddr *textSize = (memaddr *)0x20001014;
     memaddr *dataSize = (memaddr *)0x20001024;
@@ -90,13 +90,6 @@ HIDDEN void updateTLB(memaddr entry, memaddr lo)
     /*not in the tlb, we don't have to update it.*/
 }
 
-/*
-    This functions is for writing or reading from a flash device.
-    Asid is the asid of the process for getting the right FLASH device.
-    Page is the device block number.
-    Pfn is the starting physical address of the 4k block.
-    Command is for the proper operation to perform ( READ WRITE)
-*/
 void flashOperation(int asid, unsigned int page, memaddr pfn, int command)
 {
     int *flashSem = getSupDevSem(FLASH, asid, FALSE);
@@ -155,10 +148,11 @@ void pageFaultHandler()
             updateTLB(entry->sw_pte->pte_entryHI, entry->sw_pte->pte_entryLO);
             atomicOFF();
             /*update process x backing store.*/
-            flashOperation(entry->sw_asid, GETPAGE(entry->sw_pte->pte_entryHI), lo, FLASHWRITE);
+            flashOperation(entry->sw_asid, GETPAGE(entry->sw_pte->pte_entryHI), entry->sw_pte->pte_entryLO, FLASHWRITE);
         }
         /*read the content of page p from current proc backing store into the frame i.*/
         flashOperation(asid, page, lo, FLASHREAD);
+        /*updating swap pool table's entry to reflect frame i's new contents*/
         entry->sw_asid = asid;
         entry->sw_pageNo = entry_hi & GETPAGENO;
         entry->sw_pte = &sup_struct->sup_privatePgTbl[page];

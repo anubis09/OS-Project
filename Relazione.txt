@@ -1,0 +1,13 @@
+Per la realizzazione della fase 3, abbiamo seguito fedelmente quanto indicato nel capitolo 4 di Pandos.
+Inizialmente abbiamo scritto il codice senza le ottimizzazioni, poi una volta debuggato abbiamo aggiunto le ottimizzazioni
+(tranne quella riguardante le funzioni allocate e deallocate per la lista di support structure).
+
+l'uTLB_RefillHandler si trova in exception.c.
+
+Abbiamo poi scelto di rappresentare i semafori di mutua esclusione dei device,come un unico array, in questo modo si complica l'accesso
+al semaforo corretto,per questo in initProc.c abbiamo aggiunto una funzione per semplificare questa operazione.
+
+Nell'operazione di lettura degli U-proc headers, mettiamo il contenuto del primo blocco di memoria del corrispondente flashdevice
+nel primo frame libero dopo la swap pool.
+
+In initProc.c quando creiamo un nuovo processo, se non è possibile farlo (syscall 1 ritorna un valore negativo), decidiamo di uccidere il processo chiamante.

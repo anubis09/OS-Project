@@ -1,2 +1,2 @@
-# PanDavoli
-PandOs project for operative systems exam! 
+Per compilare basta digitare il comando make nella dir corrente e in resources/testers. Se l'installation prefix di umps3 è diverso da /usr o da /usr/local, bisogna cambiare la variabile UMPS3_DIR_PREFIX del makefile a mano. Successivamente aprire umps3, e aprire il file di configurazione presente in resourcer/ chiamato phase3Config.In base all'installation prefix, potrebbe essere necessario cambiare il percorso di bootstrap-rom ed execution-rom (un possibile percorso potrebbe essere /usr/local/share/umps3/fileName.rom.umps). 
+ Per eliminare i file creati dalla compilazione, digitare da terminale il comando "make clean" dove precedentemente è stato utilizzato il comando make.

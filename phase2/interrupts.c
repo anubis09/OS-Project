@@ -28,14 +28,6 @@ HIDDEN int checkdevNo(unsigned int address)
 }
 
 /* 
-    Returns the device register address associated with the given interrupt line and device number 
-*/
-HIDDEN devregtr *getDeviceRegAddr(int intLineNo, int devNo)
-{
-    return (devregtr *)(DEVREGBASE + (intLineNo - STARTINTLINEDEVICE) * 0x80 + devNo * 0x10);
-}
-
-/* 
     Function that returns TRUE if the terminal device is in a status of writing or FALSE if is on one of reading 
 */
 HIDDEN int statusTerm(devregtr *devReg)
@@ -134,7 +126,7 @@ HIDDEN void externalDeviceint(unsigned int cause_IP)
         idbmA = (int *)(BITMAPBASEADDR + 0x10);
         deviceInt = TERMINT;
         deviceNo = checkdevNo(*idbmA);
-        devRegAddr = getDeviceRegAddr(deviceInt, deviceNo);
+        devRegAddr = GETDEVREGADDR(deviceInt, deviceNo);
 
         if (statusTerm(devRegAddr))
             ioStatus = *(devRegAddr + 2);
@@ -153,7 +145,7 @@ HIDDEN void externalDeviceint(unsigned int cause_IP)
     if (deviceInt != TERMINT)
     {
         deviceNo = checkdevNo(*idbmA);
-        devRegAddr = getDeviceRegAddr(deviceInt, deviceNo);
+        devRegAddr = GETDEVREGADDR(deviceInt, deviceNo);
         ioStatus = *devRegAddr;
     }
     acknowledge(deviceInt, devRegAddr);

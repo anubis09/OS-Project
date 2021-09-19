@@ -52,6 +52,7 @@ HIDDEN void initProc(int asid)
     supStructVector[asid - 1].sup_exceptContext[GENERALEXCEPT].c_status = IMON | IEPON | TEBITON;
 
     /*reading the U-procs header informations in the first block outside the swap pool*/
+
     memaddr info = swapStart + POOLSIZE * PAGESIZE;
     flashOperation(asid, 0, info, FLASHREAD);
     memaddr *textStart = (memaddr *)(info + 0x0008);
@@ -79,7 +80,7 @@ HIDDEN void initProc(int asid)
     int status = SYSCALL(CREATEPROCESS, (int)&pstate, (int)&(supStructVector[asid - 1]), 0);
     if (status != OK)
     {
-        /*we can't create the new process, so kill everyone*/
+        /*we can't create the new process, so we kill the current process.*/
         SYSCALL(TERMPROCESS, 0, 0, 0);
     }
 }
