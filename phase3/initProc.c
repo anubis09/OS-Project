@@ -18,7 +18,7 @@ HIDDEN void initSuppSem()
 
 int *getSupDevSem(int devType, int devNum, int isReceiver)
 {
-    return &supportDeviceSemaphores[(devType + isReceiver) * DEVPERINT + (devNum)];
+    return &supportDeviceSemaphores[(devType + isReceiver) * DEVPERINT + (devNum - 1)];
 }
 
 /*

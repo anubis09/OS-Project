@@ -374,7 +374,7 @@ void uTLB_RefillHandler()
     /*here i am getting the VPN, then i am only taking the last 2 hexa digits
     because they defines the offseet in the pagetable entry.*/
 
-    int pT_Entry = ((entry_hi & GETPAGENO) >> VPNSHIFT) & 0xFF;
+    int pT_Entry = GETPAGE(entry_hi);
     if (pT_Entry > 30) /*check se è lo stack.*/
         pT_Entry = 31;
     pteEntry_t pageTable_Entry = currentProcess->p_supportStruct->sup_privatePgTbl[pT_Entry];

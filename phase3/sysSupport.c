@@ -3,15 +3,6 @@
 #define TERMCHARRECVMASK 0xFF00
 
 /*
-    Given the interrupt line number, and the device number, returns a pointer
-    to the starting address location of the correct device register.
-*/
-HIDDEN devregtr *getDeviceRegAddr(int intLineNo, int devNo)
-{
-    return (devregtr *)(DEVREGBASE + (intLineNo - STARTINTLINEDEVICE) * 0x80 + devNo * 0x10);
-}
-
-/*
     Given a memory location, returns TRUE if is inside KUSEG, FALSE otherwise.
 */
 HIDDEN int isKuseg(memaddr addr)
@@ -53,24 +44,30 @@ HIDDEN void getTod(state_t *procState)
 */
 HIDDEN void writeToPrinter(state_t *procState, int asid)
 {
+    /*get syscall's parameters*/
     char *text = (char *)procState->reg_a1;
     int len = (int)procState->reg_a2;
     if (isKuseg((memaddr)text) == TRUE && len >= 0 && len <= MAXSTRLENG)
     {
-        devregtr *printerReg = getDeviceRegAddr(PRNTINT, asid - 1);
-        int status, nchar = 0;
+        /*get the printer starting address and the printer semaphore*/
+        devregtr *printerReg = GETDEVREGADDR(PRNTINT, asid - 1);
         int *printerSem = getSupDevSem(PRINTER, asid, FALSE);
+        int status, nchar = 0;
         SYSCALL(PASSEREN, (int)&printerSem, 0, 0);
+        /*until i have printed the whole string.*/
         while (*text != EOS)
         {
-            *(printerReg + 2) = (unsigned int)*text;
+            /*put character into DATA0 register.*/
+            *(printerReg + 2) = *text;
             atomicON();
+            /*put the printchar command into the COMMAND register*/
             *(printerReg + 1) = PRINTCHAR;
             status = SYSCALL(IOWAIT, PRNTINT, asid - 1, FALSE);
             atomicOFF();
 
             if ((status & 0xFF) != READY)
             {
+                /*error happened*/
                 procState->reg_v0 = -1 * (status & 0xFF);
                 break;
             }
@@ -79,6 +76,7 @@ HIDDEN void writeToPrinter(state_t *procState, int asid)
         }
         if (status == 1)
         {
+            /*error didn't happen*/
             procState->reg_v0 = nchar;
         }
         SYSCALL(VERHOGEN, (int)&printerSem, 0, 0);
@@ -100,27 +98,29 @@ HIDDEN void writeToPrinter(state_t *procState, int asid)
 */
 HIDDEN void writeToTerminal(state_t *procState, int asid)
 {
+    /*get syscall's parameters*/
     char *text = (char *)procState->reg_a1;
     int len = (int)procState->reg_a2;
 
     if (isKuseg((memaddr)text) == TRUE && len >= 0 && len <= MAXSTRLENG)
     {
-        devregtr *termReg = getDeviceRegAddr(TERMINT, asid - 1);
-        int status, nChar = 0;
-
+        /*get the terminal starting address and the terminal semaphore*/
+        devregtr *termReg = GETDEVREGADDR(TERMINT, asid - 1);
         int *transmitterSem = getSupDevSem(TERMINAL, asid, FALSE);
+        int status, nChar = 0;
         SYSCALL(PASSEREN, (int)&transmitterSem, 0, 0);
-
+        /*until i have printed the whole string.*/
         while (*text != EOS)
         {
-
             atomicON();
-            *(termReg + 3) = ((unsigned int)*text << BYTELENGTH) | TRANSMITCHAR;
+            /*put character and command into the TRANSM_COMMAND register*/
+            *(termReg + 3) = (*text << BYTELENGTH) | TRANSMITCHAR;
             status = SYSCALL(IOWAIT, TERMINT, asid - 1, FALSE);
             atomicOFF();
 
             if ((status & TERMSTATMASK) != OKCHARRECV)
             {
+                /*error happened*/
                 procState->reg_v0 = -1 * (status & TERMSTATMASK);
                 break;
             }
@@ -131,6 +131,7 @@ HIDDEN void writeToTerminal(state_t *procState, int asid)
 
         if ((status & TERMSTATMASK) != OKCHARRECV)
         {
+            /*error didn't happen*/
             procState->reg_v0 = nChar;
         }
         SYSCALL(VERHOGEN, (int)&transmitterSem, 0, 0);
@@ -152,33 +153,40 @@ HIDDEN void writeToTerminal(state_t *procState, int asid)
 */
 HIDDEN void readFromTerminal(state_t *procState, int asid)
 {
+    /*get syscall's parameter */
     char *string = (char *)procState->reg_a1;
     if (isKuseg((memaddr)string) == TRUE)
     {
-        devregtr *base = getDeviceRegAddr(TERMINT, asid - 1);
+        /*get the terminal starting address and the terminal semaphore*/
+        devregtr *base = GETDEVREGADDR(TERMINT, asid - 1);
+        int *receiverSem = getSupDevSem(TERMINAL, asid, TRUE);
         unsigned int status;
         int nChar = 0, isNotOver = TRUE;
-        int *receiverSem = getSupDevSem(TERMINAL, asid, TRUE);
         SYSCALL(PASSEREN, (int)&receiverSem, 0, 0);
+        /*until wereceive a newline character or an error status.*/
         while (isNotOver)
         {
             atomicON();
+            /*put the receive command into the command receiver terminal register*/
             *(base + 1) = RECEIVECHAR;
             status = SYSCALL(IOWAIT, TERMINT, asid - 1, TRUE);
             atomicOFF();
             if ((status & TERMSTATMASK) != OKCHARRECV)
             {
+                /*error happened*/
                 procState->reg_v0 = -1 * (status & TERMSTATMASK);
                 isNotOver = FALSE;
             }
             else
             {
-                unsigned int c = (status & TERMCHARRECVMASK) >> BYTELENGTH;
+                /*error didn't happen*/
+                char c = (status & TERMCHARRECVMASK) >> BYTELENGTH;
                 *string = c;
                 string++;
                 nChar++;
                 if (c == '\n')
                 {
+                    /*we received the newline charcater, so the operation is over.*/
                     isNotOver = FALSE;
                     procState->reg_v0 = nChar;
                 }

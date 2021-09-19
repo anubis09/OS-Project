@@ -30,7 +30,7 @@ void atomicON();
 void atomicOFF();
 
 /*
-
+    Handles page fault exceptions, passed up by the nucleus.
 */
 void pageFaultHandler();
 #endif

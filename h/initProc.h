@@ -6,18 +6,22 @@
 #include "pandos_const.h"
 #include "vmSupport.h"
 
-#define FLASH 0
-#define PRINTER 1
-#define TERMINAL 2
-#define SUPDEVSEMNUM 32
+#define DISK 0
+#define FLASH 1
+#define NETWORK 2
+#define PRINTER 3
+#define TERMINAL 4
+#define SUPDEVSEMNUM 48
 
 /*
-    0-7 FLASH
-    8-15 PRINT
-    16-23 TERM TRANSMITTER
-    24-31 TERM RECEIVER
+    0-7 DISK
+    8-15 FLASH
+    16-23 NETWORK
+    24-31 PRINTER
+    32-39 TERM TRANSMITTER
+    40-47 TERM RECEIVER
 */
-int supportDeviceSemaphores[32];
+int supportDeviceSemaphores[SUPDEVSEMNUM];
 
 /*
     Important for a more graceful conclusion of istantiatorProcess.
@@ -37,6 +41,7 @@ void istantiatorProcess();
     Given the device type, device number and a bool that indicates
     if is the terminal receiver, this functions returns a pointer 
     to the semaphore corresponding to that specific device.
+    devNum goes from 1 to 8
 */
 int *getSupDevSem(int devType, int devNum, int isReceiver);
 
